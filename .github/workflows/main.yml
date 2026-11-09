@@ -26,7 +26,6 @@ jobs:
 
       - name: Prepare Resources & Build APK
         run: |
-          # Explicitly target your actual workspace directory structure
           ANDROID_DIR="New folder/New folder/native_mobile/android"
           if [ ! -d "$ANDROID_DIR" ]; then
             ANDROID_DIR="native_mobile/android"
@@ -88,7 +87,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
         }
     }
     companion object {
-        const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGGLE_HABIT"
+        const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGjekt.ACTION_TOGGLE_HABIT"
         const val EXTRA_LOG_ID = "com.habittracker.EXTRA_LOG_ID"
     }
 }
