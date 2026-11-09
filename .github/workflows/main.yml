@@ -27,10 +27,19 @@ jobs:
 
       - name: Build Android APK
         run: |
-          # 1. Unpack any zip if uploaded
-          find . -name "*.zip" -exec unzip -o {} \; 2>/dev/null || true
+          # 1. Unpack HabitTrack_Updated.zip if present
+          if [ -f "HabitTrack_Updated.zip" ]; then
+            echo "Unpacking HabitTrack_Updated.zip..."
+            mkdir -p /tmp/fresh_app
+            unzip -o HabitTrack_Updated.zip -d /tmp/fresh_app
+            cp -rf /tmp/fresh_app/* .
+          fi
 
-          # 2. Locate Android project
+          # 2. Remove old duplicate folders so they are not built by mistake
+          rm -rf "New folder/New folder/native_mobile" 2>/dev/null || true
+          rm -rf "New folder/native_mobile" 2>/dev/null || true
+
+          # 3. Locate the Android project
           TARGET=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
           if [ -z "$TARGET" ]; then
             echo "settings.gradle not found!"
@@ -38,20 +47,20 @@ jobs:
           fi
 
           PROJECT_DIR=$(dirname "$TARGET")
-          echo "Found Android project at: $PROJECT_DIR"
+          echo "Building fresh Android project at: $PROJECT_DIR"
           cd "$PROJECT_DIR"
 
-          # 3. Enable AndroidX
+          # 4. Enable AndroidX
           echo "android.useAndroidX=true" > gradle.properties
           echo "android.enableJetifier=true" >> gradle.properties
           echo "org.gradle.jvmargs=-Xmx2048m" >> gradle.properties
 
-          # 4. Build APK
-          gradle assembleDebug --stacktrace
+          # 5. Clean and Build APK
+          gradle clean assembleDebug --stacktrace
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
         with:
-          name: HabitTrack-APK
+          name: HabitTrack-v2-APK
           path: "**/app/build/outputs/apk/**/*.apk"
           if-no-files-found: error
