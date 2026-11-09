@@ -27,24 +27,21 @@ jobs:
 
       - name: Build Android APK
         run: |
-          # 1. Unpack any zip if present
-          for f in $(find . -name "*.zip"); do
-            echo "Unpacking $f..."
-            unzip -o "$f" || true
-          done
-
-          # 2. Locate Android project
+          # 1. Locate Android project
           TARGET=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
           if [ -z "$TARGET" ]; then
-            echo "settings.gradle not found, listing directory contents:"
-            ls -la
-            find . -maxdepth 3
+            echo "settings.gradle not found!"
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$TARGET")
           echo "Found Android project at: $PROJECT_DIR"
           cd "$PROJECT_DIR"
+
+          # 2. Enable AndroidX in gradle.properties (fixes checkDebugAarMetadata)
+          echo "android.useAndroidX=true" > gradle.properties
+          echo "android.enableJetifier=true" >> gradle.properties
+          echo "org.gradle.jvmargs=-Xmx2048m" >> gradle.properties
 
           # 3. Create missing resources
           RES="app/src/main/res"
