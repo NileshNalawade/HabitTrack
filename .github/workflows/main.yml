@@ -38,60 +38,15 @@ jobs:
           mkdir -p "$RES_DIR/drawable"
           mkdir -p "$RES_DIR/mipmap-hdpi" "$RES_DIR/mipmap-mdpi" "$RES_DIR/mipmap-xhdpi" "$RES_DIR/mipmap-xxhdpi" "$RES_DIR/mipmap-xxxhdpi"
 
-          cat << 'EOF' > "$RES_DIR/drawable/widget_background_dark.xml"
-<?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#1A1F2C" />
-    <corners android:radius="16dp" />
-    <stroke android:width="1dp" android:color="#334155" />
-</shape>
-EOF
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">\n    <solid android:color="#1A1F2C" />\n    <corners android:radius="16dp" />\n    <stroke android:width="1dp" android:color="#334155" />\n</shape>' > "$RES_DIR/drawable/widget_background_dark.xml"
 
-          cat << 'EOF' > "$RES_DIR/drawable/ic_check_circle.xml"
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-  <path android:fillColor="#10B981" android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM10,17l-5,-5 1.41,-1.41L10,14.17l7.59,-7.59L19,8l-9,9z"/>
-</vector>
-EOF
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">\n  <path android:fillColor="#10B981" android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM10,17l-5,-5 1.41,-1.41L10,14.17l7.59,-7.59L19,8l-9,9z"/>\n</vector>' > "$RES_DIR/drawable/ic_check_circle.xml"
 
-          cat << 'EOF' > "$RES_DIR/drawable/ic_circle_outline.xml"
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-  <path android:fillColor="#475569" android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z"/>
-</vector>
-EOF
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">\n  <path android:fillColor="#475569" android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z"/>\n</vector>' > "$RES_DIR/drawable/ic_circle_outline.xml"
 
           RECEIVER_FILE="app/src/main/java/com/habittracker/widget/WidgetActionReceiver.kt"
-          if [ -f "$RECEIVER_FILE" ] && grep -q "AppDatabase" "$RECEIVER_FILE"; then
-            cat << 'EOF' > "$RECEIVER_FILE"
-package com.habittracker.widget
-
-import android.appwidget.AppWidgetManager
-import android.content.BroadcastReceiver
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import com.habittracker.data.WidgetDataHelper
-
-class WidgetActionReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == ACTION_TOGGLE_HABIT) {
-            val logId = intent.getStringExtra(EXTRA_LOG_ID) ?: return
-            WidgetDataHelper.toggleHabit(context, logId)
-            val appWidgetManager = AppWidgetManager.getInstance(context)
-            val componentName = ComponentName(context, HabitWidgetProvider::class.java)
-            val ids = appWidgetManager.getAppWidgetIds(componentName)
-            for (id in ids) {
-                HabitWidgetProvider.updateAppWidget(context, appWidgetManager, id)
-            }
-        }
-    }
-    companion object {
-        const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGGLE_HABIT"
-        const val EXTRA_LOG_ID = "com.habittracker.EXTRA_LOG_ID"
-    }
-}
-EOF
+          if [ -f "$RECEIVER_FILE" ]; then
+            printf 'package com.habittracker.widget\n\nimport android.appwidget.AppWidgetManager\nimport android.content.BroadcastReceiver\nimport android.content.ComponentName\nimport android.content.Context\nimport android.content.Intent\nimport com.habittracker.data.WidgetDataHelper\n\nclass WidgetActionReceiver : BroadcastReceiver() {\n    override fun onReceive(context: Context, intent: Intent) {\n        if (intent.action == ACTION_TOGGLE_HABIT) {\n            val logId = intent.getStringExtra(EXTRA_LOG_ID) ?: return\n            WidgetDataHelper.toggleHabit(context, logId)\n            val appWidgetManager = AppWidgetManager.getInstance(context)\n            val componentName = ComponentName(context, HabitWidgetProvider::class.java)\n            val ids = appWidgetManager.getAppWidgetIds(componentName)\n            for (id in ids) {\n                HabitWidgetProvider.updateAppWidget(context, appWidgetManager, id)\n            }\n        }\n    }\n    companion object {\n        const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGGLE_HABIT"\n        const val EXTRA_LOG_ID = "com.habittracker.EXTRA_LOG_ID"\n    }\n}' > "$RECEIVER_FILE"
           fi
 
           if [ ! -f "gradlew" ]; then
