@@ -19,6 +19,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -26,94 +31,86 @@ jobs:
 
       - name: Prepare Resources & Build APK
         run: |
-          # 1. Unpack any zip if present
-          find . -name "*.zip" -exec unzip -o {} \; 2>/dev/null || true
-
-          # 2. Locate Android project
           ANDROID_DIR=$(find . -name "settings.gradle" -exec dirname {} \; | head -n 1)
           if [ -z "$ANDROID_DIR" ]; then
             ANDROID_DIR="native_mobile/android"
           fi
-          echo "Found Android directory at: $ANDROID_DIR"
+          echo "Android project located at: $ANDROID_DIR"
           cd "$ANDROID_DIR"
 
-          # 3. Ensure drawable resources exist
           RES_DIR="app/src/main/res"
           mkdir -p "$RES_DIR/drawable"
           mkdir -p "$RES_DIR/mipmap-hdpi" "$RES_DIR/mipmap-mdpi" "$RES_DIR/mipmap-xhdpi" "$RES_DIR/mipmap-xxhdpi" "$RES_DIR/mipmap-xxxhdpi"
 
-          cat << 'EOF' > "$RES_DIR/drawable/widget_background_dark.xml"
-<?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#1A1F2C" />
-    <corners android:radius="16dp" />
-    <stroke android:width="1dp" android:color="#334155" />
-</shape>
-EOF
+          cat <<- 'EOF' > "$RES_DIR/drawable/widget_background_dark.xml"
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#1A1F2C" />
+              <corners android:radius="16dp" />
+              <stroke android:width="1dp" android:color="#334155" />
+          </shape>
+          EOF
 
-          cat << 'EOF' > "$RES_DIR/drawable/ic_check_circle.xml"
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-  <path android:fillColor="#10B981" android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM10,17l-5,-5 1.41,-1.41L10,14.17l7.59,-7.59L19,8l-9,9z"/>
-</vector>
-EOF
+          cat <<- 'EOF' > "$RES_DIR/drawable/ic_check_circle.xml"
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+            <path android:fillColor="#10B981" android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM10,17l-5,-5 1.41,-1.41L10,14.17l7.59,-7.59L19,8l-9,9z"/>
+          </vector>
+          EOF
 
-          cat << 'EOF' > "$RES_DIR/drawable/ic_circle_outline.xml"
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-  <path android:fillColor="#475569" android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z"/>
-</vector>
-EOF
+          cat <<- 'EOF' > "$RES_DIR/drawable/ic_circle_outline.xml"
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+            <path android:fillColor="#475569" android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z"/>
+          </vector>
+          EOF
 
           if [ ! -f "$RES_DIR/mipmap-hdpi/ic_launcher.png" ]; then
-            cat << 'EOF' > "$RES_DIR/drawable/ic_launcher.xml"
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-  <path android:fillColor="#0D9488" android:pathData="M0,0h108v108h-108z"/>
-  <path android:fillColor="#FFFFFF" android:pathData="M30,54l16,16 32,-32" android:strokeWidth="6" android:strokeColor="#FFFFFF"/>
-</vector>
-EOF
+            cat <<- 'EOF' > "$RES_DIR/drawable/ic_launcher.xml"
+            <?xml version="1.0" encoding="utf-8"?>
+            <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#0D9488" android:pathData="M0,0h108v108h-108z"/>
+              <path android:fillColor="#FFFFFF" android:pathData="M30,54l16,16 32,-32" android:strokeWidth="6" android:strokeColor="#FFFFFF"/>
+            </vector>
+            EOF
             sed -i 's/@mipmap\/ic_launcher/@drawable\/ic_launcher/g' app/src/main/AndroidManifest.xml
           fi
 
           RECEIVER_FILE="app/src/main/java/com/habittracker/widget/WidgetActionReceiver.kt"
           if grep -q "AppDatabase" "$RECEIVER_FILE" 2>/dev/null; then
-            cat << 'EOF' > "$RECEIVER_FILE"
-package com.habittracker.widget
+            cat <<- 'EOF' > "$RECEIVER_FILE"
+            package com.habittracker.widget
 
-import android.appwidget.AppWidgetManager
-import android.content.BroadcastReceiver
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import com.habittracker.data.WidgetDataHelper
+            import android.appwidget.AppWidgetManager
+            import android.content.BroadcastReceiver
+            import android.content.ComponentName
+            import android.content.Context
+            import android.content.Intent
+            import com.habittracker.data.WidgetDataHelper
 
-class WidgetActionReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == ACTION_TOGGLE_HABIT) {
-            val logId = intent.getStringExtra(EXTRA_LOG_ID) ?: return
-            WidgetDataHelper.toggleHabit(context, logId)
-            val appWidgetManager = AppWidgetManager.getInstance(context)
-            val componentName = ComponentName(context, HabitWidgetProvider::class.java)
-            val ids = appWidgetManager.getAppWidgetIds(componentName)
-            for (id in ids) {
-                HabitWidgetProvider.updateAppWidget(context, appWidgetManager, id)
+            class WidgetActionReceiver : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    if (intent.action == ACTION_TOGGLE_HABIT) {
+                        val logId = intent.getStringExtra(EXTRA_LOG_ID) ?: return
+                        WidgetDataHelper.toggleHabit(context, logId)
+                        val appWidgetManager = AppWidgetManager.getInstance(context)
+                        val componentName = ComponentName(context, HabitWidgetProvider::class.java)
+                        val ids = appWidgetManager.getAppWidgetIds(componentName)
+                        for (id in ids) {
+                            HabitWidgetProvider.updateAppWidget(context, appWidgetManager, id)
+                        }
+                    }
+                }
+                companion object {
+                    const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGGLE_HABIT"
+                    const val EXTRA_LOG_ID = "com.habittracker.EXTRA_LOG_ID"
+                }
             }
-        }
-    }
-    companion object {
-        const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGGLE_HABIT"
-        const val EXTRA_LOG_ID = "com.habittracker.EXTRA_LOG_ID"
-    }
-}
-EOF
+            EOF
           fi
 
-          # 4. Accept Android licenses
-          yes | sdkmanager --licenses 2>/dev/null || true
-
-          # 5. Build APK
-          gradle assembleRelease --stacktrace
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
