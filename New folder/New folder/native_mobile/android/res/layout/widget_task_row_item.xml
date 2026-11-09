@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="4dp">
+
+    <!-- Interactive Checkbox Button (PendingIntent) -->
+    <ImageView
+        android:id="@+id/widget_item_btn_check"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:contentDescription="Toggle Habit"
+        android:src="@android:drawable/checkbox_off_background"
+        android:background="?android:attr/selectableItemBackgroundBorderless" />
+
+    <TextView
+        android:id="@+id/widget_item_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="8dp"
+        android:text="Habit Item"
+        android:textColor="#F8FAFC"
+        android:textSize="12sp"
+        android:singleLine="true" />
+</LinearLayout>
+
