@@ -27,8 +27,9 @@ jobs:
       - name: Prepare Resources & Build APK
         run: |
           python3 -c '
-          import os
+          import os, subprocess
 
+          # Find settings.gradle dynamically
           android_dir = ""
           for root, dirs, files in os.walk("."):
               if "settings.gradle" in files:
@@ -38,43 +39,45 @@ jobs:
               android_dir = "native_mobile/android"
           
           print(f"Android project located at: {android_dir}")
-          os.chdir(android_dir)
 
-          res_dir = "app/src/main/res"
-          os.makedirs(f"{res_dir}/drawable", exist_ok=True)
+          # Create resource directories
+          res_dir = os.path.join(android_dir, "app/src/main/res")
+          os.makedirs(os.path.join(res_dir, "drawable"), exist_ok=True)
           for density in ["hdpi", "mdpi", "xhdpi", "xxhdpi", "xxxhdpi"]:
-              os.makedirs(f"{res_dir}/mipmap-{density}", exist_ok=True)
+              os.makedirs(os.path.join(res_dir, f"mipmap-{density}"), exist_ok=True)
 
-          with open(f"{res_dir}/drawable/widget_background_dark.xml", "w") as f:
+          # Write XML resource files
+          with open(os.path.join(res_dir, "drawable/widget_background_dark.xml"), "w") as f:
               f.write("""<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<shape xmlns:android=\"http://schemas.android.com/apk/res/android\" android:shape=\"rectangle\">\n    <solid android:color=\"#1A1F2C\" />\n    <corners android:radius=\"16dp\" />\n    <stroke android:width=\"1dp\" android:color=\"#334155\" />\n</shape>""")
 
-          with open(f"{res_dir}/drawable/ic_check_circle.xml", "w") as f:
+          with open(os.path.join(res_dir, "drawable/ic_check_circle.xml"), "w") as f:
               f.write("""<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<vector xmlns:android=\"http://schemas.android.com/apk/res/android\" android:width=\"24dp\" android:height=\"24dp\" android:viewportWidth=\"24\" android:viewportHeight=\"24\">\n  <path android:fillColor=\"#10B981\" android:pathData=\"M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM10,17l-5,-5 1.41,-1.41L10,14.17l7.59,-7.59L19,8l-9,9z\"/>\n</vector>""")
 
-          with open(f"{res_dir}/drawable/ic_circle_outline.xml", "w") as f:
+          with open(os.path.join(res_dir, "drawable/ic_circle_outline.xml"), "w") as f:
               f.write("""<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<vector xmlns:android=\"http://schemas.android.com/apk/res/android\" android:width=\"24dp\" android:height=\"24dp\" android:viewportWidth=\"24\" android:viewportHeight=\"24\">\n  <path android:fillColor=\"#475569\" android:pathData=\"M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z\"/>\n</vector>""")
 
-          receiver_file = "app/src/main/java/com/habittracker/widget/WidgetActionReceiver.kt"
+          # Update WidgetActionReceiver if applicable
+          receiver_file = os.path.join(android_dir, "app/src/main/java/com/habittracker/widget/WidgetActionReceiver.kt")
           if os.path.exists(receiver_file):
               with open(receiver_file, "r") as f:
                   content = f.read()
               if "AppDatabase" in content:
                   with open(receiver_file, "w") as f:
                       f.write("""package com.habittracker.widget\n\nimport android.appwidget.AppWidgetManager\nimport android.content.BroadcastReceiver\nimport android.content.ComponentName\nimport android.content.Context\nimport android.content.Intent\nimport com.habittracker.data.WidgetDataHelper\n\nclass WidgetActionReceiver : BroadcastReceiver() {\n    override fun onReceive(context: Context, intent: Intent) {\n        if (intent.action == ACTION_TOGGLE_HABIT) {\n            val logId = intent.getStringExtra(EXTRA_LOG_ID) ?: return\n            WidgetDataHelper.toggleHabit(context, logId)\n            val appWidgetManager = AppWidgetManager.getInstance(context)\n            val componentName = ComponentName(context, HabitWidgetProvider::class.java)\n            val ids = appWidgetManager.getAppWidgetIds(componentName)\n            for (id in ids) {\n                HabitWidgetProvider.updateAppWidget(context, appWidgetManager, id)\n            }\n        }\n    }\n    companion object {\n        const val ACTION_TOGGLE_HABIT = \"com.habittracker.ACTION_TOGGLE_HABIT\"\n        const val EXTRA_LOG_ID = \"com.habittracker.EXTRA_LOG_ID\"\n    }\n}""")
-          '
 
-          export ANDROID_HOME=$ANDROID_SDK_ROOT
+          # Ensure gradlew exists, generate if missing
+          gradlew_path = os.path.join(android_dir, "gradlew")
+          if not os.path.exists(gradlew_path):
+              print("gradlew not found, generating wrapper...")
+              subprocess.run(["gradle", "wrapper"], cwd=android_dir, check=True)
+
+          os.chmod(gradlew_path, 0o755)
           
-          # Check for gradlew, if missing generate wrapper or use global gradle
-          if [ -f "gradlew" ]; then
-            chmod +x gradlew
-            ./gradlew assembleRelease --stacktrace
-          else
-            echo "gradlew not found, generating wrapper..."
-            gradle wrapper
-            chmod +x gradlew
-            ./gradlew assembleRelease --stacktrace
-          fi
+          # Run gradle build inside the correct android directory context
+          env = os.environ.copy()
+          env["ANDROID_HOME"] = env.get("ANDROID_SDK_ROOT", "")
+          subprocess.run(["./gradlew", "assembleRelease", "--stacktrace"], cwd=android_dir, env=env, check=True)
+          '
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
