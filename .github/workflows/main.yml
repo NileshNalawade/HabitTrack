@@ -27,9 +27,8 @@ jobs:
       - name: Prepare Resources & Build APK
         run: |
           python3 -c '
-          import os, glob
+          import os
 
-          # Find settings.gradle dynamically
           android_dir = ""
           for root, dirs, files in os.walk("."):
               if "settings.gradle" in files:
@@ -46,19 +45,15 @@ jobs:
           for density in ["hdpi", "mdpi", "xhdpi", "xxhdpi", "xxxhdpi"]:
               os.makedirs(f"{res_dir}/mipmap-{density}", exist_ok=True)
 
-          # Write widget_background_dark.xml
           with open(f"{res_dir}/drawable/widget_background_dark.xml", "w") as f:
               f.write("""<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<shape xmlns:android=\"http://schemas.android.com/apk/res/android\" android:shape=\"rectangle\">\n    <solid android:color=\"#1A1F2C\" />\n    <corners android:radius=\"16dp\" />\n    <stroke android:width=\"1dp\" android:color=\"#334155\" />\n</shape>""")
 
-          # Write ic_check_circle.xml
           with open(f"{res_dir}/drawable/ic_check_circle.xml", "w") as f:
               f.write("""<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<vector xmlns:android=\"http://schemas.android.com/apk/res/android\" android:width=\"24dp\" android:height=\"24dp\" android:viewportWidth=\"24\" android:viewportHeight=\"24\">\n  <path android:fillColor=\"#10B981\" android:pathData=\"M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM10,17l-5,-5 1.41,-1.41L10,14.17l7.59,-7.59L19,8l-9,9z\"/>\n</vector>""")
 
-          # Write ic_circle_outline.xml
           with open(f"{res_dir}/drawable/ic_circle_outline.xml", "w") as f:
               f.write("""<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<vector xmlns:android=\"http://schemas.android.com/apk/res/android\" android:width=\"24dp\" android:height=\"24dp\" android:viewportWidth=\"24\" android:viewportHeight=\"24\">\n  <path android:fillColor=\"#475569\" android:pathData=\"M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z\"/>\n</vector>""")
 
-          # Write WidgetActionReceiver.kt if AppDatabase exists
           receiver_file = "app/src/main/java/com/habittracker/widget/WidgetActionReceiver.kt"
           if os.path.exists(receiver_file):
               with open(receiver_file, "r") as f:
@@ -68,9 +63,18 @@ jobs:
                       f.write("""package com.habittracker.widget\n\nimport android.appwidget.AppWidgetManager\nimport android.content.BroadcastReceiver\nimport android.content.ComponentName\nimport android.content.Context\nimport android.content.Intent\nimport com.habittracker.data.WidgetDataHelper\n\nclass WidgetActionReceiver : BroadcastReceiver() {\n    override fun onReceive(context: Context, intent: Intent) {\n        if (intent.action == ACTION_TOGGLE_HABIT) {\n            val logId = intent.getStringExtra(EXTRA_LOG_ID) ?: return\n            WidgetDataHelper.toggleHabit(context, logId)\n            val appWidgetManager = AppWidgetManager.getInstance(context)\n            val componentName = ComponentName(context, HabitWidgetProvider::class.java)\n            val ids = appWidgetManager.getAppWidgetIds(componentName)\n            for (id in ids) {\n                HabitWidgetProvider.updateAppWidget(context, appWidgetManager, id)\n            }\n        }\n    }\n    companion object {\n        const val ACTION_TOGGLE_HABIT = \"com.habittracker.ACTION_TOGGLE_HABIT\"\n        const val EXTRA_LOG_ID = \"com.habittracker.EXTRA_LOG_ID\"\n    }\n}""")
           '
 
-          chmod +x gradlew
           export ANDROID_HOME=$ANDROID_SDK_ROOT
-          ./gradlew assembleRelease --stacktrace
+          
+          # Check for gradlew, if missing generate wrapper or use global gradle
+          if [ -f "gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew assembleRelease --stacktrace
+          else
+            echo "gradlew not found, generating wrapper..."
+            gradle wrapper
+            chmod +x gradlew
+            ./gradlew assembleRelease --stacktrace
+          fi
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
