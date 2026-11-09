@@ -19,11 +19,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: true
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -110,6 +105,7 @@ jobs:
           fi
 
           chmod +x gradlew
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
           ./gradlew assembleRelease --stacktrace
 
       - name: Upload HabitTrack APK
