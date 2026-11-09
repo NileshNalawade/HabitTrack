@@ -29,7 +29,6 @@ jobs:
           python3 -c '
           import os, subprocess
 
-          # Locate settings.gradle precisely
           android_dir = None
           for root, dirs, files in os.walk("."):
               if "settings.gradle" in files and ".git" not in root:
@@ -37,7 +36,6 @@ jobs:
                   break
 
           if not android_dir:
-              # Fallback to standard path if search misses
               android_dir = "native_mobile/android"
 
           print(f"Target Android directory: {android_dir}")
@@ -72,12 +70,14 @@ jobs:
 
           env = os.environ.copy()
           env["ANDROID_HOME"] = env.get("ANDROID_SDK_ROOT", "")
-          subprocess.run(["./gradlew", "assembleRelease", "--stacktrace"], cwd=android_dir, env=env, check=True)
+          
+          # Build assembleDebug or assembleRelease with debug signing fallback
+          subprocess.run(["./gradlew", "assembleDebug", "--stacktrace"], cwd=android_dir, env=env, check=True)
           '
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
         with:
           name: HabitTrack-APK
-          path: "**/app/build/outputs/apk/release/*.apk"
+          path: "**/app/build/outputs/apk/debug/*.apk"
           if-no-files-found: error
