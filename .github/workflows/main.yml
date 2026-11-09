@@ -27,36 +27,57 @@ jobs:
 
       - name: Build Android APK
         run: |
-          # 1. Unpack HabitTrack_Updated.zip if present
-          if [ -f "HabitTrack_Updated.zip" ]; then
-            echo "Unpacking HabitTrack_Updated.zip..."
-            mkdir -p /tmp/fresh_app
-            unzip -o HabitTrack_Updated.zip -d /tmp/fresh_app
-            cp -rf /tmp/fresh_app/* .
+          # 1. Unpack any zip file found anywhere in repository
+          find . -name "*.zip" | while read -r zipfile; do
+            echo "Unpacking $zipfile..."
+            unzip -o "$zipfile" || true
+          done
+
+          # 2. Prefer the project with versionCode 2
+          TARGET=""
+          for bg in $(find . -name "build.gradle" -path "*/app/build.gradle" -not -path "*/build/*"); do
+            if grep -q "versionCode 2" "$bg" 2>/dev/null; then
+              TARGET=$(dirname $(dirname "$bg"))
+              echo "Found v2 project at: $TARGET"
+              break
+            fi
+          done
+
+          if [ -z "$TARGET" ]; then
+            TARGET_SETTINGS=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
+            if [ -n "$TARGET_SETTINGS" ]; then
+              TARGET=$(dirname "$TARGET_SETTINGS")
+            fi
           fi
 
-          # 2. Remove old duplicate folders so they are not built by mistake
-          rm -rf "New folder/New folder/native_mobile" 2>/dev/null || true
-          rm -rf "New folder/native_mobile" 2>/dev/null || true
-
-          # 3. Locate the Android project
-          TARGET=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
           if [ -z "$TARGET" ]; then
-            echo "settings.gradle not found!"
+            echo "ERROR: Could not locate Android project!"
+            ls -la
+            find . -maxdepth 3
             exit 1
           fi
 
-          PROJECT_DIR=$(dirname "$TARGET")
-          echo "Building fresh Android project at: $PROJECT_DIR"
+          PROJECT_DIR="$TARGET"
+          echo "Building Android project at: $PROJECT_DIR"
           cd "$PROJECT_DIR"
 
-          # 4. Enable AndroidX
+          # 3. Enable AndroidX & memory config in gradle.properties
           echo "android.useAndroidX=true" > gradle.properties
           echo "android.enableJetifier=true" >> gradle.properties
-          echo "org.gradle.jvmargs=-Xmx2048m" >> gradle.properties
+          echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> gradle.properties
 
-          # 5. Clean and Build APK
-          gradle clean assembleDebug --stacktrace
+          # 4. Remove loose root Kotlin files that cause duplicate class collisions
+          rm -f *.kt 2>/dev/null || true
+
+          # 5. Ensure proguard file exists
+          touch app/proguard-rules.pro 2>/dev/null || true
+
+          # 6. Fix AAPT resource references if old files are present
+          find app/src/main/res -name "widget_task_row_item.xml" -exec sed -i 's|@android:drawable/checkbox_off_background|@drawable/ic_circle_outline|g' {} + 2>/dev/null || true
+          find app/src/main/res -name "widget_habit_tracker.xml" -exec sed -i 's|<View|<TextView|g' {} + 2>/dev/null || true
+
+          # 7. Run Gradle build
+          gradle assembleDebug --stacktrace
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
