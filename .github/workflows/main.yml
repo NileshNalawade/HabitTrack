@@ -87,7 +87,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
         }
     }
     companion object {
-        const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGjekt.ACTION_TOGGLE_HABIT"
+        const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGGLE_HABIT"
         const val EXTRA_LOG_ID = "com.habittracker.EXTRA_LOG_ID"
     }
 }
