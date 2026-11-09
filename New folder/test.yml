@@ -1,0 +1,56 @@
+name: Build Android APK with Home Screen Widgets
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+
+      - name: Build Android APK
+        run: |
+          TARGET_DIR=$(dirname $(find . -name "settings.gradle" | head -n 1))
+          cd "$TARGET_DIR"
+
+          RES="app/src/main/res"
+          mkdir -p "$RES/drawable" "$RES/mipmap-hdpi"
+
+          echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHNoYXBlIHhtbG5zOmFuZHJvaWQ9Imh0dHA6Ly9zY2hlbWFzLmFuZHJvaWQuY29tL2Fway9yZXMvYW5kcm9pZCIKICAgIGFuZHJvaWQ6c2hhcGU9InJlY3RhbmdsZSI+CiAgICA8c29saWQgYW5kcm9pZDpjb2xvcj0iIzFBMUYyQyIgLz4KICAgIDxjb3JuZXJzIGFuZHJvaWQ6cmFkaXVzPSIxNmRwIiAvPgogICAgPHN0cm9rZSBhbmRyb2lkOndpZHRoPSIxZHAiIGFuZHJvaWQ6Y29sb3I9IiMzMzQxNTUiIC8+Cjwvc2hhcGU+Cgo=" | base64 -d > "$RES/drawable/widget_background_dark.xml"
+          echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHZlY3RvciB4bWxuczphbmRyb2lkPSJodHRwOi8vc2NoZW1hcy5hbmRyb2lkLmNvbS9hcGsvcmVzL2FuZHJvaWQiCiAgICBhbmRyb2lkOndpZHRoPSIyNGRwIgogICAgYW5kcm9pZDpoZWlnaHQ9IjI0ZHAiCiAgICBhbmRyb2lkOnZpZXdwb3J0V2lkdGg9IjI0IgogICAgYW5kcm9pZDp2aWV3cG9ydEhlaWdodD0iMjQiPgogIDxwYXRoCiAgICAgIGFuZHJvaWQ6ZmlsbENvbG9yPSIjMTBCOTgxIgogICAgICBhbmRyb2lkOnBhdGhEYXRhPSJNMTIsMkM2LjQ4LDIgMiw2LjQ4IDIsMTJzNC40OCwxMCAxMCwxMCAxMCwtNC40OCAxMCwtMTBTMTcuNTIsMiAxMiwyek0xMCwxN2wtNSwtNSAxLjQxLC0xLjQxTDEwLDE0LjE3bDcuNTksLTcuNTlMMTksOGwtOSw5eiIvPgo8L3ZlY3Rvcj4KCg==" | base64 -d > "$RES/drawable/ic_check_circle.xml"
+          echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHZlY3RvciB4bWxuczphbmRyb2lkPSJodHRwOi8vc2NoZW1hcy5hbmRyb2lkLmNvbS9hcGsvcmVzL2FuZHJvaWQiCiAgICBhbmRyb2lkOndpZHRoPSIyNGRwIgogICAgYW5kcm9pZDpoZWlnaHQ9IjI0ZHAiCiAgICBhbmRyb2lkOnZpZXdwb3J0V2lkdGg9IjI0IgogICAgYW5kcm9pZDp2aWV3cG9ydEhlaWdodD0iMjQiPgogIDxwYXRoCiAgICAgIGFuZHJvaWQ6ZmlsbENvbG9yPSIjNDc1NTY5IgogICAgICBhbmRyb2lkOnBhdGhEYXRhPSJNMTIsMkM2LjQ4LDIgMiw2LjQ4IDIsMTJzNC40OCwxMCAxMCwxMCAxMCwtNC40OCAxMCwtMTBTMTcuNTIsMiAxMiwyek0xMiwyMGMtNC40MiwwIC04LC0zLjU4IC04LC04czMuNTgsLTggOCwtOCA4LDMuNTggOCw4IC0zLjU4LDggLTgsOHoiLz4KPC92ZWN0b3I+Cgo=" | base64 -d > "$RES/drawable/ic_circle_outline.xml"
+
+          if [ ! -f "$RES/mipmap-hdpi/ic_launcher.png" ]; then
+            echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48dmVjdG9yIHhtbG5zOmFuZHJvaWQ9Imh0dHA6Ly9zY2hlbWFzLmFuZHJvaWQuY29tL2Fway9yZXMvYW5kcm9pZCIgYW5kcm9pZDp3aWR0aD0iMTA4ZHAiIGFuZHJvaWQ6aGVpZ2h0PSIxMDhkcCIgYW5kcm9pZDp2aWV3cG9ydFdpZHRoPSIxMDgiIGFuZHJvaWQ6dmlld3BvcnRIZWlnaHQ9IjEwOCI+PHBhdGggYW5kcm9pZDpmaWxsQ29sb3I9IiMwRDk0ODgiIGFuZHJvaWQ6cGF0aERhdGE9Ik0wLDBoMTA4djEwOGgtMTA4eiIvPjxwYXRoIGFuZHJvaWQ6ZmlsbENvbG9yPSIjRkZGRkZGIiBhbmRyb2lkOnBhdGhEYXRhPSJNMzAsNTRsMTYsMTYgMzIsLTMyIiBhbmRyb2lkOnN0cm9rZVdpZHRoPSI2IiBhbmRyb2lkOnN0cm9rZUNvbG9yPSIjRkZGRkZGIi8+PC92ZWN0b3I+" | base64 -d > "$RES/drawable/ic_launcher.xml"
+            sed -i 's/@mipmap\/ic_launcher/@drawable\/ic_launcher/g' app/src/main/AndroidManifest.xml
+          fi
+
+          REC="app/src/main/java/com/habittracker/widget/WidgetActionReceiver.kt"
+          if grep -q "AppDatabase" "$REC" 2>/dev/null; then
+            echo "cGFja2FnZSBjb20uaGFiaXR0cmFja2VyLndpZGdldAoKaW1wb3J0IGFuZHJvaWQuYXBwd2lkZ2V0LkFwcFdpZGdldE1hbmFnZXIKaW1wb3J0IGFuZHJvaWQuY29udGVudC5Ccm9hZGNhc3RSZWNlaXZlcgppbXBvcnQgYW5kcm9pZC5jb250ZW50LkNvbXBvbmVudE5hbWUKaW1wb3J0IGFuZHJvaWQuY29udGVudC5Db250ZXh0CmltcG9ydCBhbmRyb2lkLmNvbnRlbnQuSW50ZW50CmltcG9ydCBjb20uaGFiaXR0cmFja2VyLmRhdGEuV2lkZ2V0RGF0YUhlbHBlcgoKLyoqCiAqIEJyb2FkY2FzdFJlY2VpdmVyIGZvciBoYW5kbGluZyBpbnRlcmFjdGl2ZSB3aWRnZXQgY2xpY2tzIGluIGJhY2tncm91bmQKICovCmNsYXNzIFdpZGdldEFjdGlvblJlY2VpdmVyIDogQnJvYWRjYXN0UmVjZWl2ZXIoKSB7CgogICAgb3ZlcnJpZGUgZnVuIG9uUmVjZWl2ZShjb250ZXh0OiBDb250ZXh0LCBpbnRlbnQ6IEludGVudCkgewogICAgICAgIGlmIChpbnRlbnQuYWN0aW9uID09IEFDVElPTl9UT0dHTEVfSEFCSVQpIHsKICAgICAgICAgICAgdmFsIGxvZ0lkID0gaW50ZW50LmdldFN0cmluZ0V4dHJhKEVYVFJBX0xPR19JRCkgPzogcmV0dXJuCgogICAgICAgICAgICAvLyAxLiBEaXJlY3Qgd2lkZ2V0IHN0YXRlIHRvZ2dsZSBpbiBzaGFyZWQgcHJlZmVyZW5jZXMKICAgICAgICAgICAgV2lkZ2V0RGF0YUhlbHBlci50b2dnbGVIYWJpdChjb250ZXh0LCBsb2dJZCkKCiAgICAgICAgICAgIC8vIDIuIE5vdGlmeSB3aWRnZXQgbWFuYWdlciB0byByZS1yZW5kZXIKICAgICAgICAgICAgdmFsIGFwcFdpZGdldE1hbmFnZXIgPSBBcHBXaWRnZXRNYW5hZ2VyLmdldEluc3RhbmNlKGNvbnRleHQpCiAgICAgICAgICAgIHZhbCBjb21wb25lbnROYW1lID0gQ29tcG9uZW50TmFtZShjb250ZXh0LCBIYWJpdFdpZGdldFByb3ZpZGVyOjpjbGFzcy5qYXZhKQogICAgICAgICAgICB2YWwgaWRzID0gYXBwV2lkZ2V0TWFuYWdlci5nZXRBcHBXaWRnZXRJZHMoY29tcG9uZW50TmFtZSkKCiAgICAgICAgICAgIGZvciAoaWQgaW4gaWRzKSB7CiAgICAgICAgICAgICAgICBIYWJpdFdpZGdldFByb3ZpZGVyLnVwZGF0ZUFwcFdpZGdldChjb250ZXh0LCBhcHBXaWRnZXRNYW5hZ2VyLCBpZCkKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KCiAgICBjb21wYW5pb24gb2JqZWN0IHsKICAgICAgICBjb25zdCB2YWwgQUNUSU9OX1RPR0dMRV9IQUJJVCA9ICJjb20uaGFiaXR0cmFja2VyLkFDVElPTl9UT0dHTEVfSEFCSVQiCiAgICAgICAgY29uc3QgdmFsIEVYVFJBX0xPR19JRCA9ICJjb20uaGFiaXR0cmFja2VyLkVYVFJBX0xPR19JRCIKICAgIH0KfQo=" | base64 -d > "$REC"
+          fi
+
+          gradle assembleDebug --stacktrace
+
+      - name: Upload HabitTrack APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HabitTrack-APK
+          path: "**/app/build/outputs/apk/**/*.apk"
+          if-no-files-found: error

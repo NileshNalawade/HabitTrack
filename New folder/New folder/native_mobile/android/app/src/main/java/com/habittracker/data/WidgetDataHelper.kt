@@ -15,6 +15,7 @@ object WidgetDataHelper {
     private const val PREFS_NAME = "HabitTrackWidgetPrefs"
     private const val KEY_HABITS = "cached_habits"
     private const val KEY_EXPENSES = "cached_expenses"
+    private const val KEY_DAY_TYPE = "cached_day_type"
 
     fun getTodayHabitSummary(context: Context): HabitSummary {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -52,6 +53,32 @@ object WidgetDataHelper {
         return HabitSummary(percentage, taskList)
     }
 
+    fun saveData(context: Context, habitsJson: String, expensesJson: String, dayType: String = "Normal") {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_HABITS, habitsJson)
+            .putString(KEY_EXPENSES, expensesJson)
+            .putString(KEY_DAY_TYPE, dayType)
+            .apply()
+    }
+
+    fun getDayType(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(KEY_DAY_TYPE, "Normal") ?: "Normal"
+    }
+
+    fun cycleDayType(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val current = prefs.getString(KEY_DAY_TYPE, "Normal") ?: "Normal"
+        val next = when (current) {
+            "Normal" -> "Rest Day"
+            "Rest Day" -> "Holiday"
+            else -> "Normal"
+        }
+        prefs.edit().putString(KEY_DAY_TYPE, next).apply()
+        return next
+    }
+
     fun toggleHabit(context: Context, logId: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val habitsJson = prefs.getString(KEY_HABITS, null) ?: return
@@ -73,17 +100,9 @@ object WidgetDataHelper {
         }
     }
 
-    fun saveData(context: Context, habitsJson: String, expensesJson: String) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit()
-            .putString(KEY_HABITS, habitsJson)
-            .putString(KEY_EXPENSES, expensesJson)
-            .apply()
-    }
-
     fun getTodayExpenseTotal(context: Context): Double {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val expensesJson = prefs.getString(KEY_EXPENSES, null) ?: return 8.50
+        val expensesJson = prefs.getString(KEY_EXPENSES, null) ?: return 0.0
 
         var total = 0.0
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
@@ -97,9 +116,8 @@ object WidgetDataHelper {
                 }
             }
         } catch (e: Exception) {
-            total = 8.50
+            total = 0.0
         }
         return total
     }
 }
-

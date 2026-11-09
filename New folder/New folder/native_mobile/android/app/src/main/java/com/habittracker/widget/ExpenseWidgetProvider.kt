@@ -24,7 +24,7 @@ class ExpenseWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget_expense_tracker)
             val todayTotal = WidgetDataHelper.getTodayExpenseTotal(context)
 
-            views.setTextViewText(R.id.widget_expense_total_text, String.format("$%.2f", todayTotal))
+            views.setTextViewText(R.id.widget_expense_total_text, String.format("₹%.2f", todayTotal))
 
             // Deep link pending intent to launch instant quick-log sheet
             val quickAddIntent = Intent(Intent.ACTION_VIEW, Uri.parse("habittrack://quick-add-expense")).apply {
@@ -42,4 +42,3 @@ class ExpenseWidgetProvider : AppWidgetProvider() {
         }
     }
 }
-

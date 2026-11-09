@@ -133,7 +133,9 @@
         if (window.AndroidBridge && typeof window.AndroidBridge.syncData === 'function') {
           var ds = todayStr();
           var todayHabits = this.logs.filter(function(l){ return l.date === ds; });
-          window.AndroidBridge.syncData(JSON.stringify(todayHabits), JSON.stringify(this.expenses));
+          var ovr = this.getOverride ? this.getOverride(ds) : null;
+          var dayType = ovr ? ovr.dayType : 'Normal';
+          window.AndroidBridge.syncData(JSON.stringify(todayHabits), JSON.stringify(this.expenses), dayType);
         } else if (window.AndroidBridge && typeof window.AndroidBridge.notifyDataChanged === 'function') {
           window.AndroidBridge.notifyDataChanged();
         }
@@ -270,7 +272,12 @@
       this.tasks = this.tasks.filter(function(t){ return t.taskId !== id; });
       var today = todayStr();
       this.logs = this.logs.filter(function(l){
-        return !(l.taskId === id && l.date === today && l.status === 'Pending');
+        // Preserve any completed logs (today and past) - never wipe completion history
+        if (l.taskId === id && l.status === 'Completed') return true;
+        // Preserve all historical logs from past days
+        if (l.taskId === id && l.date < today) return true;
+        // Only remove today's pending/incomplete log
+        return l.taskId !== id;
       });
       this._notify({ type: 'TASK_MASTER_DELETED' });
     },
@@ -658,7 +665,7 @@
         }
         if (p.total > 0) {
           ctx.fillStyle = '#F87171'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
-          ctx.fillText('$'+p.total.toFixed(0), p.x, p.y - 8);
+          ctx.fillText('₹'+p.total.toFixed(0), p.x, p.y - 8);
         }
       });
     }
@@ -727,7 +734,7 @@
       if (bl) bl.textContent = st.best + 'd';
 
       var sl = document.getElementById('header-today-spend') || document.getElementById('hdr-spend');
-      if (sl) sl.textContent = '$' + db.getTodaySpend().toFixed(2);
+      if (sl) sl.textContent = '₹' + db.getTodaySpend().toFixed(2);
     },
 
     _render: function() {
@@ -756,6 +763,22 @@
     },
 
     _bindTopBar: function() {
+      // Theme Toggle (Light / Dark)
+      var themeBtn = document.getElementById('btn-theme-toggle');
+      var applyTheme = function(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('habittrack_theme', theme);
+        if (themeBtn) themeBtn.textContent = theme === 'light' ? '☀️ Light' : '🌙 Dark';
+      };
+      var savedTheme = localStorage.getItem('habittrack_theme') || 'dark';
+      applyTheme(savedTheme);
+      if (themeBtn) {
+        themeBtn.addEventListener('click', function() {
+          var cur = document.documentElement.getAttribute('data-theme') || 'dark';
+          applyTheme(cur === 'light' ? 'dark' : 'light');
+        });
+      }
+
       var dlBtn = document.getElementById('btn-download-xlsx');
       if (dlBtn) dlBtn.addEventListener('click', function() {
         excelBridge.downloadXlsx();
@@ -823,7 +846,7 @@
           db.addExpense(item, amount);
           ui._closeModal('modal-expense');
           expForm.reset();
-          ui._toast('Logged $' + amount.toFixed(2) + ' for ' + item.trim(), 'success');
+          ui._toast('Logged ₹' + amount.toFixed(2) + ' for ' + item.trim(), 'success');
         }
       });
 
@@ -1123,11 +1146,11 @@
         '<div class="expense-metrics-grid">' +
           '<div class="metric-card glow-card-red">' +
             '<span class="metric-title">🔥 Today\'s Spend</span>' +
-            '<span class="metric-value red-accent-text">$' + todaySpend.toFixed(2) + '</span>' +
+            '<span class="metric-value red-accent-text">₹' + todaySpend.toFixed(2) + '</span>' +
           '</div>' +
           '<div class="metric-card">' +
             '<span class="metric-title">💳 Total Outlay</span>' +
-            '<span class="metric-value">$' + totalSpend.toFixed(2) + '</span>' +
+            '<span class="metric-value">₹' + totalSpend.toFixed(2) + '</span>' +
           '</div>' +
           '<div class="metric-card">' +
             '<span class="metric-title">📝 Logged Items</span>' +
@@ -1142,7 +1165,7 @@
           '</div>' +
           '<form id="form-inline-expense" class="quick-exp-form">' +
             '<input type="text" class="form-input quick-exp-item" id="inline-exp-item" placeholder="Item name (e.g. Coffee, Lunch, Fuel, Gym)" required>' +
-            '<input type="number" step="0.01" min="0.01" class="form-input quick-exp-amount" id="inline-exp-amount" placeholder="$ Amount" required>' +
+            '<input type="number" step="0.01" min="0.01" class="form-input quick-exp-amount" id="inline-exp-amount" placeholder="₹ Amount" required>' +
             '<button type="submit" class="btn-primary-action btn-red-glow quick-exp-btn">+ Add</button>' +
           '</form>' +
         '</div>' +
@@ -1164,7 +1187,7 @@
                   (isToday ? '<span class="today-tag-pill">Today</span>' : '') +
                 '</div>' +
                 '<span class="ledger-date">' + e.date + '</span>' +
-                '<span class="ledger-amount red-accent-amount">$' + Number(e.amount).toFixed(2) + '</span>' +
+                '<span class="ledger-amount red-accent-amount">₹' + Number(e.amount).toFixed(2) + '</span>' +
                 '<span class="text-center"><button class="btn-delete-expense" data-id="' + e.expenseId + '" title="Delete">✕</button></span>' +
               '</div>';
             }).join('') :
@@ -1187,7 +1210,7 @@
             itemInp.value = '';
             amtInp.value = '';
             itemInp.focus();
-            ui._toast('Added $' + amt.toFixed(2) + ' for ' + item, 'success');
+            ui._toast('Added ₹' + amt.toFixed(2) + ' for ' + item, 'success');
           }
         };
       }
@@ -1243,7 +1266,7 @@
           '<div class="streak-card">' +
             '<div class="streak-icon-wrap">💳</div>' +
             '<div class="streak-details">' +
-              '<span class="streak-val red-neon-val">$' + totalSpend.toFixed(2) + '</span>' +
+              '<span class="streak-val red-neon-val">₹' + totalSpend.toFixed(2) + '</span>' +
               '<span class="streak-title">Total Money Logged</span>' +
             '</div>' +
           '</div>' +
@@ -1259,7 +1282,7 @@
         '<div class="chart-panel glow-card-red">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
             '<h3 class="panel-title">14-Day Expenditure Trend</h3>' +
-            '<span style="font-size:10px;color:var(--red-neon)">● Daily Spend ($)</span>' +
+            '<span style="font-size:10px;color:var(--red-neon)">● Daily Spend (₹)</span>' +
           '</div>' +
           '<div class="canvas-wrapper"><canvas id="chart-trend" height="160"></canvas></div>' +
         '</div>';
@@ -1338,7 +1361,7 @@
                   '</div>' +
                   '<span class="widget-badge-red">Live Total</span>' +
                 '</div>' +
-                '<div class="widget-expense-amount red-accent-text">$' + spend.toFixed(2) + '</div>' +
+                '<div class="widget-expense-amount red-accent-text">₹' + spend.toFixed(2) + '</div>' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">' +
                   '<span style="font-size:9.5px;color:var(--text-m);">' + (db.expenses.filter(function(e){ return e.date===today; }).length) + ' items today</span>' +
                   '<button class="widget-action-btn btn-red-glow" id="widget-add-exp-btn">+ Add Expense</button>' +

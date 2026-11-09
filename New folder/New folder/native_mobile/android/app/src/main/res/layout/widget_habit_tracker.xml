@@ -3,14 +3,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:padding="12dp"
     android:background="@drawable/widget_background_dark">
 
-    <!-- Header -->
+    <!-- Top Header Bar -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="4dp">
 
         <TextView
             android:id="@+id/widget_title"
@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:text="⚡ Daily Habits"
             android:textColor="#FFFFFF"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
 
         <TextView
@@ -26,9 +26,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
-            android:text="67%"
+            android:text="0%"
             android:textColor="#10B981"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
     </RelativeLayout>
 
@@ -37,27 +37,57 @@
         android:id="@+id/widget_progress_bar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="6dp"
+        android:layout_height="5dp"
         android:max="100"
-        android:progress="67"
+        android:progress="0"
         android:progressTint="#10B981"
-        android:layout_marginBottom="10dp" />
+        android:layout_marginBottom="8dp" />
 
-    <!-- Container for dynamic rows -->
+    <!-- Action Controls: Day Type Selector & Today Only Button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <!-- Day Type Selector Chip -->
+        <TextView
+            android:id="@+id/btn_widget_day_type"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:text="☀️ Normal"
+            android:textColor="#38BDF8"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:background="@drawable/widget_chip_bg" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- + Today Only Button -->
+        <TextView
+            android:id="@+id/btn_widget_today_only"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:text="+ Today Only"
+            android:textColor="#10B981"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:background="@drawable/widget_chip_bg" />
+    </LinearLayout>
+
+    <!-- Container for dynamic rows (All habits) -->
     <LinearLayout
         android:id="@+id/widget_task_container"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:orientation="vertical" />
 
-    <!-- Footer live sync hint -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="● 1-Tap PendingIntent Direct Sync"
-        android:textColor="#64748B"
-        android:textSize="9sp"
-        android:layout_marginTop="4dp" />
 </LinearLayout>
-

@@ -12,6 +12,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import com.habittracker.data.WidgetDataHelper
 import com.habittracker.widget.ExpenseWidgetProvider
 import com.habittracker.widget.HabitWidgetProvider
 
@@ -58,9 +59,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleDeepLink(intent: Intent?) {
-        if (intent?.data?.scheme == "habittrack" && intent.data?.host == "quick-add-expense") {
-            // Trigger expense tab in the web view
-            webView.evaluateJavascript("if (window.ui) { window.ui.switchTab('expenses'); window.ui._openModal('modal-expense'); }", null)
+        if (intent?.data?.scheme == "habittrack") {
+            when (intent.data?.host) {
+                "quick-add-expense" -> {
+                    webView.evaluateJavascript("if (window.ui) { window.ui.switchTab('expenses'); window.ui._openModal('modal-expense'); }", null)
+                }
+                "quick-add-today-only" -> {
+                    webView.evaluateJavascript("if (window.ui) { window.ui.switchTab('today'); window.ui._openModal('modal-adhoc'); }", null)
+                }
+            }
         }
     }
 
@@ -74,9 +81,14 @@ class MainActivity : AppCompatActivity() {
 
     class WebAppInterface(private val context: Context) {
         @JavascriptInterface
-        fun syncData(habitsJson: String, expensesJson: String) {
-            com.habittracker.data.WidgetDataHelper.saveData(context, habitsJson, expensesJson)
+        fun syncData(habitsJson: String, expensesJson: String, dayType: String?) {
+            WidgetDataHelper.saveData(context, habitsJson, expensesJson, dayType ?: "Normal")
             notifyDataChanged()
+        }
+
+        @JavascriptInterface
+        fun getWidgetDayType(): String {
+            return WidgetDataHelper.getDayType(context)
         }
 
         @JavascriptInterface
@@ -100,4 +112,3 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
-
