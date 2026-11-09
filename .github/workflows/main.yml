@@ -23,12 +23,30 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.5
+          cache-disabled: true
 
       - name: Build Android APK
         run: |
-          TARGET_DIR=$(dirname $(find . -name "settings.gradle" | head -n 1))
-          cd "$TARGET_DIR"
+          # 1. Unpack any zip if present
+          for f in $(find . -name "*.zip"); do
+            echo "Unpacking $f..."
+            unzip -o "$f" || true
+          done
 
+          # 2. Locate Android project
+          TARGET=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
+          if [ -z "$TARGET" ]; then
+            echo "settings.gradle not found, listing directory contents:"
+            ls -la
+            find . -maxdepth 3
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$TARGET")
+          echo "Found Android project at: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+
+          # 3. Create missing resources
           RES="app/src/main/res"
           mkdir -p "$RES/drawable" "$RES/mipmap-hdpi"
 
@@ -46,6 +64,7 @@ jobs:
             echo "cGFja2FnZSBjb20uaGFiaXR0cmFja2VyLndpZGdldAoKaW1wb3J0IGFuZHJvaWQuYXBwd2lkZ2V0LkFwcFdpZGdldE1hbmFnZXIKaW1wb3J0IGFuZHJvaWQuY29udGVudC5Ccm9hZGNhc3RSZWNlaXZlcgppbXBvcnQgYW5kcm9pZC5jb250ZW50LkNvbXBvbmVudE5hbWUKaW1wb3J0IGFuZHJvaWQuY29udGVudC5Db250ZXh0CmltcG9ydCBhbmRyb2lkLmNvbnRlbnQuSW50ZW50CmltcG9ydCBjb20uaGFiaXR0cmFja2VyLmRhdGEuV2lkZ2V0RGF0YUhlbHBlcgoKLyoqCiAqIEJyb2FkY2FzdFJlY2VpdmVyIGZvciBoYW5kbGluZyBpbnRlcmFjdGl2ZSB3aWRnZXQgY2xpY2tzIGluIGJhY2tncm91bmQKICovCmNsYXNzIFdpZGdldEFjdGlvblJlY2VpdmVyIDogQnJvYWRjYXN0UmVjZWl2ZXIoKSB7CgogICAgb3ZlcnJpZGUgZnVuIG9uUmVjZWl2ZShjb250ZXh0OiBDb250ZXh0LCBpbnRlbnQ6IEludGVudCkgewogICAgICAgIGlmIChpbnRlbnQuYWN0aW9uID09IEFDVElPTl9UT0dHTEVfSEFCSVQpIHsKICAgICAgICAgICAgdmFsIGxvZ0lkID0gaW50ZW50LmdldFN0cmluZ0V4dHJhKEVYVFJBX0xPR19JRCkgPzogcmV0dXJuCgogICAgICAgICAgICAvLyAxLiBEaXJlY3Qgd2lkZ2V0IHN0YXRlIHRvZ2dsZSBpbiBzaGFyZWQgcHJlZmVyZW5jZXMKICAgICAgICAgICAgV2lkZ2V0RGF0YUhlbHBlci50b2dnbGVIYWJpdChjb250ZXh0LCBsb2dJZCkKCiAgICAgICAgICAgIC8vIDIuIE5vdGlmeSB3aWRnZXQgbWFuYWdlciB0byByZS1yZW5kZXIKICAgICAgICAgICAgdmFsIGFwcFdpZGdldE1hbmFnZXIgPSBBcHBXaWRnZXRNYW5hZ2VyLmdldEluc3RhbmNlKGNvbnRleHQpCiAgICAgICAgICAgIHZhbCBjb21wb25lbnROYW1lID0gQ29tcG9uZW50TmFtZShjb250ZXh0LCBIYWJpdFdpZGdldFByb3ZpZGVyOjpjbGFzcy5qYXZhKQogICAgICAgICAgICB2YWwgaWRzID0gYXBwV2lkZ2V0TWFuYWdlci5nZXRBcHBXaWRnZXRJZHMoY29tcG9uZW50TmFtZSkKCiAgICAgICAgICAgIGZvciAoaWQgaW4gaWRzKSB7CiAgICAgICAgICAgICAgICBIYWJpdFdpZGdldFByb3ZpZGVyLnVwZGF0ZUFwcFdpZGdldChjb250ZXh0LCBhcHBXaWRnZXRNYW5hZ2VyLCBpZCkKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KCiAgICBjb21wYW5pb24gb2JqZWN0IHsKICAgICAgICBjb25zdCB2YWwgQUNUSU9OX1RPR0dMRV9IQUJJVCA9ICJjb20uaGFiaXR0cmFja2VyLkFDVElPTl9UT0dHTEVfSEFCSVQiCiAgICAgICAgY29uc3QgdmFsIEVYVFJBX0xPR19JRCA9ICJjb20uaGFiaXR0cmFja2VyLkVYVFJBX0xPR19JRCIKICAgIH0KfQo=" | base64 -d > "$REC"
           fi
 
+          # 4. Build APK
           gradle assembleDebug --stacktrace
 
       - name: Upload HabitTrack APK
