@@ -19,6 +19,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+
       - name: Prepare Resources & Build APK
         run: |
           python3 -c '
@@ -58,18 +63,15 @@ jobs:
                       f.write("""package com.habittracker.widget\n\nimport android.appwidget.AppWidgetManager\nimport android.content.BroadcastReceiver\nimport android.content.ComponentName\nimport android.content.Context\nimport android.content.Intent\nimport com.habittracker.data.WidgetDataHelper\n\nclass WidgetActionReceiver : BroadcastReceiver() {\n    override fun onReceive(context: Context, intent: Intent) {\n        if (intent.action == ACTION_TOGGLE_HABIT) {\n            val logId = intent.getStringExtra(EXTRA_LOG_ID) ?: return\n            WidgetDataHelper.toggleHabit(context, logId)\n            val appWidgetManager = AppWidgetManager.getInstance(context)\n            val componentName = ComponentName(context, HabitWidgetProvider::class.java)\n            val ids = appWidgetManager.getAppWidgetIds(componentName)\n            for (id in ids) {\n                HabitWidgetProvider.updateAppWidget(context, appWidgetManager, id)\n            }\n        }\n    }\n    companion object {\n        const val ACTION_TOGGLE_HABIT = \"com.habittracker.ACTION_TOGGLE_HABIT\"\n        const val EXTRA_LOG_ID = \"com.habittracker.EXTRA_LOG_ID\"\n    }\n}""")
 
           gradlew_path = os.path.join(android_dir, "gradlew")
-          if os.path.exists(gradlew_path):
-              os.chmod(gradlew_path, 0o755)
+          if not os.path.exists(gradlew_path):
+              print("Generating gradle wrapper...")
+              subprocess.run(["gradle", "wrapper"], cwd=android_dir, check=True)
+
+          os.chmod(gradlew_path, 0o755)
 
           env = os.environ.copy()
           env["ANDROID_HOME"] = env.get("ANDROID_SDK_ROOT", "")
-          
-          # Try building with offline flag to prevent external network lockups
-          try:
-              subprocess.run(["./gradlew", "assembleDebug", "--offline", "--stacktrace"], cwd=android_dir, env=env, check=True)
-          except subprocess.CalledProcessError:
-              print("Offline build failed, retrying normally...")
-              subprocess.run(["./gradlew", "assembleDebug", "--stacktrace"], cwd=android_dir, env=env, check=True)
+          subprocess.run(["./gradlew", "assembleDebug", "--stacktrace"], cwd=android_dir, env=env, check=True)
           '
 
       - name: Upload HabitTrack APK
