@@ -19,6 +19,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Prepare Resources & Build APK
         run: |
           ANDROID_DIR="New folder/New folder/native_mobile/android"
@@ -44,13 +47,9 @@ jobs:
             printf 'package com.habittracker.widget\n\nimport android.appwidget.AppWidgetManager\nimport android.content.BroadcastReceiver\nimport android.content.ComponentName\nimport android.content.Context\nimport android.content.Intent\nimport com.habittracker.data.WidgetDataHelper\n\nclass WidgetActionReceiver : BroadcastReceiver() {\n    override fun onReceive(context: Context, intent: Intent) {\n        if (intent.action == ACTION_TOGGLE_HABIT) {\n            val logId = intent.getStringExtra(EXTRA_LOG_ID) ?: return\n            WidgetDataHelper.toggleHabit(context, logId)\n            val appWidgetManager = AppWidgetManager.getInstance(context)\n            val componentName = ComponentName(context, HabitWidgetProvider::class.java)\n            val ids = appWidgetManager.getAppWidgetIds(componentName)\n            for (id in ids) {\n                HabitWidgetProvider.updateAppWidget(context, appWidgetManager, id)\n            }\n        }\n    }\n    companion object {\n        const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGGLE_HABIT"\n        const val EXTRA_LOG_ID = "com.habittracker.EXTRA_LOG_ID"\n    }\n}' > "$RECEIVER_FILE"
           fi
 
-          if [ ! -f "gradlew" ]; then
-            gradle wrapper
-          fi
-
           chmod +x gradlew
-          export ANDROID_HOME=$ANDROID_SDK_ROOT
-          ./gradlew assembleDebug --stacktrace
+          # Using --info gives us exact feedback if compilation fails again
+          ./gradlew assembleDebug --info --stacktrace
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
