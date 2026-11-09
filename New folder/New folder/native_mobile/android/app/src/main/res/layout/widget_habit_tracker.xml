@@ -61,10 +61,11 @@
             android:textSize="10sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:paddingHorizontal="8dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
             android:background="@drawable/widget_chip_bg" />
 
-        <View
+        <TextView
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1" />
@@ -79,7 +80,8 @@
             android:textSize="10sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:paddingHorizontal="8dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
             android:background="@drawable/widget_chip_bg" />
     </LinearLayout>
 
