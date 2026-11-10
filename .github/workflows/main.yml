@@ -33,7 +33,22 @@ jobs:
             unzip -o "$zipfile" || true
           done
 
-          # 2. Prefer the project with highest versionCode (v3 -> v2)
+          # 2. Overwrite all nested folders with latest code & assets
+          if [ -d "native_mobile/android" ]; then
+            for old_android in $(find . -type d -path "*/native_mobile/android" -not -path "./native_mobile/android"); do
+              echo "Overwriting stale $old_android with updated code..."
+              cp -rf native_mobile/android/* "$old_android/" 2>/dev/null || true
+            done
+          fi
+
+          for assetdir in $(find . -type d -name "assets" -path "*/app/src/main/assets"); do
+            echo "Injecting updated web assets into $assetdir..."
+            cp -f index.html "$assetdir/index.html" 2>/dev/null || true
+            cp -rf css "$assetdir/" 2>/dev/null || true
+            cp -rf js "$assetdir/" 2>/dev/null || true
+          done
+
+          # 3. Target the project with versionCode 3
           TARGET=""
           for bg in $(find . -name "build.gradle" -path "*/app/build.gradle" -not -path "*/build/*"); do
             if grep -q "versionCode 3" "$bg" 2>/dev/null; then
@@ -44,26 +59,11 @@ jobs:
           done
 
           if [ -z "$TARGET" ]; then
-            for bg in $(find . -name "build.gradle" -path "*/app/build.gradle" -not -path "*/build/*"); do
-              if grep -q "versionCode 2" "$bg" 2>/dev/null; then
-                TARGET=$(dirname $(dirname "$bg"))
-                echo "Found v2 project at: $TARGET"
-                break
-              fi
-            done
-          fi
-
-          if [ -z "$TARGET" ]; then
-            TARGET_SETTINGS=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
-            if [ -n "$TARGET_SETTINGS" ]; then
-              TARGET=$(dirname "$TARGET_SETTINGS")
-            fi
-          fi
-
-          if [ -z "$TARGET" ]; then
-            echo "ERROR: Could not locate Android project!"
-            ls -la
-            find . -maxdepth 3
+            echo "========================================================================"
+            echo "ERROR: Version 3 was NOT found!"
+            echo "This means HabitTrack_Updated.zip was not uploaded to this commit."
+            echo "Please upload HabitTrack_Updated.zip to GitHub via Add file -> Upload files."
+            echo "========================================================================"
             exit 1
           fi
 
@@ -71,27 +71,21 @@ jobs:
           echo "Building Android project at: $PROJECT_DIR"
           cd "$PROJECT_DIR"
 
-          # 3. Enable AndroidX & memory config in gradle.properties
+          # 4. Enable AndroidX & memory config in gradle.properties
           echo "android.useAndroidX=true" > gradle.properties
           echo "android.enableJetifier=true" >> gradle.properties
           echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> gradle.properties
 
-          # 4. Remove loose root Kotlin files that cause duplicate class collisions
+          # 5. Clean loose root Kotlin files
           rm -f *.kt 2>/dev/null || true
-
-          # 5. Ensure proguard file exists
           touch app/proguard-rules.pro 2>/dev/null || true
 
-          # 6. Fix AAPT resource references if old files are present
-          find app/src/main/res -name "widget_task_row_item.xml" -exec sed -i 's|@android:drawable/checkbox_off_background|@drawable/ic_circle_outline|g' {} + 2>/dev/null || true
-          find app/src/main/res -name "widget_habit_tracker.xml" -exec sed -i 's|<View|<TextView|g' {} + 2>/dev/null || true
-
-          # 7. Run Gradle build
+          # 6. Build APK
           gradle assembleDebug --stacktrace
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
         with:
-          name: HabitTrack-v2.1-APK
+          name: HabitTrack-v2.1-NEW-APK
           path: "**/app/build/outputs/apk/**/*.apk"
           if-no-files-found: error
