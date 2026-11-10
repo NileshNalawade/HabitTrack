@@ -33,15 +33,25 @@ jobs:
             unzip -o "$zipfile" || true
           done
 
-          # 2. Prefer the project with versionCode 2
+          # 2. Prefer the project with highest versionCode (v3 -> v2)
           TARGET=""
           for bg in $(find . -name "build.gradle" -path "*/app/build.gradle" -not -path "*/build/*"); do
-            if grep -q "versionCode 2" "$bg" 2>/dev/null; then
+            if grep -q "versionCode 3" "$bg" 2>/dev/null; then
               TARGET=$(dirname $(dirname "$bg"))
-              echo "Found v2 project at: $TARGET"
+              echo "Found v3 project at: $TARGET"
               break
             fi
           done
+
+          if [ -z "$TARGET" ]; then
+            for bg in $(find . -name "build.gradle" -path "*/app/build.gradle" -not -path "*/build/*"); do
+              if grep -q "versionCode 2" "$bg" 2>/dev/null; then
+                TARGET=$(dirname $(dirname "$bg"))
+                echo "Found v2 project at: $TARGET"
+                break
+              fi
+            done
+          fi
 
           if [ -z "$TARGET" ]; then
             TARGET_SETTINGS=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
@@ -82,6 +92,6 @@ jobs:
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
         with:
-          name: HabitTrack-v2-APK
+          name: HabitTrack-v2.1-APK
           path: "**/app/build/outputs/apk/**/*.apk"
           if-no-files-found: error
