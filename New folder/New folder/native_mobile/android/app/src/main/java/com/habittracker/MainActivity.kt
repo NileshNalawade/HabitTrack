@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
         webView = WebView(this)
         setContentView(webView)
 
+        webView.clearCache(true)
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -34,7 +35,7 @@ class MainActivity : AppCompatActivity() {
             allowContentAccess = true
             loadWithOverviewMode = true
             useWideViewPort = true
-            cacheMode = WebSettings.LOAD_DEFAULT
+            cacheMode = WebSettings.LOAD_NO_CACHE
         }
 
         webView.webChromeClient = WebChromeClient()

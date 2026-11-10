@@ -320,14 +320,22 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Main Application Script (Self-contained, offline-first bundle) -->
-  <script src="js/bundle.js"></script>
+  <script src="js/bundle.js?v=2.1.0"></script>
   <script>
+    // Clean up any stale Service Worker caches from previous installations
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js').catch(function() {
-          navigator.serviceWorker.register('./sw.js').catch(function() {});
-        });
-      });
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (var i = 0; i < registrations.length; i++) {
+          registrations[i].unregister();
+        }
+      }).catch(function() {});
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (var i = 0; i < names.length; i++) {
+          caches.delete(names[i]);
+        }
+      }).catch(function() {});
     }
   </script>
 </body>

@@ -52,7 +52,8 @@
     init: function() {
       try {
         // Enforce Day 0 clean start (purge any previous dummy seed data)
-        if (localStorage.getItem('ht_clean_v3') !== 'true') {
+        var currentTasks = localStorage.getItem(KEYS.TASKS) || '';
+        if (currentTasks.indexOf('Wake up at 6:00 AM') !== -1 || currentTasks.indexOf('T001') !== -1 || localStorage.getItem('ht_clean_v3') !== 'true') {
           localStorage.removeItem(KEYS.TASKS);
           localStorage.removeItem(KEYS.LOGS);
           localStorage.removeItem(KEYS.OVERRIDES);
