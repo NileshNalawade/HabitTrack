@@ -71,8 +71,8 @@ jobs:
           echo "Building Android project at: $PROJECT_DIR"
           cd "$PROJECT_DIR"
 
-          # 4. Append AndroidX & memory config safely without wiping existing properties
-          echo "" >> gradle.properties
+          # 4. Ensure gradle.properties exists and safely configure properties
+          touch gradle.properties
           grep -q "android.useAndroidX" gradle.properties || echo "android.useAndroidX=true" >> gradle.properties
           grep -q "android.enableJetifier" gradle.properties || echo "android.enableJetifier=true" >> gradle.properties
           grep -q "org.gradle.jvmargs" gradle.properties || echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> gradle.properties
@@ -81,8 +81,8 @@ jobs:
           rm -f *.kt 2>/dev/null || true
           touch app/proguard-rules.pro 2>/dev/null || true
 
-          # 6. Build APK with full stacktrace and info logging to pinpoint failure
-          gradle assembleDebug --info --stacktrace
+          # 6. Build APK with stacktrace and debug info to capture exact failure
+          gradle assembleDebug --stacktrace --info
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
