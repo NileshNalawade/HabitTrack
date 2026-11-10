@@ -15,15 +15,8 @@
     EXPENSES: 'ht_expenses'
   };
 
-  // ── SEED DATA (Clean, independent) ─────────────────────────
-  var SEED_TASKS = [
-    { taskId:'T001', taskName:'Wake up at 6:00 AM',       targetFrequency:'Daily', icon:'⏰', color:'#3B82F6', createdDate:'2024-01-01' },
-    { taskId:'T002', taskName:'Gym — Strength Training',  targetFrequency:'Daily', icon:'🏋️', color:'#10B981', createdDate:'2024-01-01' },
-    { taskId:'T003', taskName:'Cardio & 10,000 Steps',    targetFrequency:'Daily', icon:'🏃', color:'#06B6D4', createdDate:'2024-01-01' },
-    { taskId:'T004', taskName:'Clean Diet & Meal Prep',   targetFrequency:'Daily', icon:'🥗', color:'#84CC16', createdDate:'2024-01-01' },
-    { taskId:'T005', taskName:'Supplements & Vitamins',   targetFrequency:'Daily', icon:'💊', color:'#8B5CF6', createdDate:'2024-01-01' },
-    { taskId:'T006', taskName:'Deep Work / Reading 30m',  targetFrequency:'Daily', icon:'📖', color:'#F59E0B', createdDate:'2024-01-01' }
-  ];
+  // ── SEED DATA (Clean, day 0 start) ─────────────────────────
+  var SEED_TASKS = [];
 
   function todayStr() {
     var d = new Date();
@@ -41,42 +34,12 @@
   }
 
   function seedLogs() {
-    var today = todayStr();
-    var logs = [];
-    for (var i = -13; i <= 0; i++) {
-      var ds = offsetDate(today, i);
-      SEED_TASKS.forEach(function(t) {
-        var isRestDay = (i === -8 || i === -3);
-        var completionRate = i < 0 ? 0.80 : 0;
-        var status = isRestDay ? 'Skipped' : (Math.random() < completionRate ? 'Completed' : 'Pending');
-        logs.push({
-          logId: 'L_' + ds.replace(/-/g,'') + '_' + t.taskId,
-          date: ds,
-          taskId: t.taskId,
-          taskName: t.taskName,
-          status: status,
-          completionTimestamp: status === 'Completed' ? ds + 'T07:30:00Z' : null,
-          isAdhoc: false,
-          notes: isRestDay ? 'Rest day — streak protected' : ''
-        });
-      });
-    }
-    return logs;
+    return [];
   }
 
-  var SEED_OVERRIDES = [
-    { date: offsetDate(todayStr(), -8), dayType:'Rest Day', reason:'Scheduled recovery' },
-    { date: offsetDate(todayStr(), -3), dayType:'Holiday', reason:'Family outing' }
-  ];
+  var SEED_OVERRIDES = [];
 
-  var SEED_EXPENSES = [
-    { expenseId:'E001', date: todayStr(),                 item:'Coffee & Breakfast',    amount: 8.50, timestamp: todayStr()+'T08:30:00Z' },
-    { expenseId:'E002', date: offsetDate(todayStr(), -1), item:'Grocery & Essentials',  amount:42.30, timestamp: offsetDate(todayStr(), -1)+'T18:15:00Z' },
-    { expenseId:'E003', date: offsetDate(todayStr(), -3), item:'Restaurant Dinner',     amount:28.00, timestamp: offsetDate(todayStr(), -3)+'T20:00:00Z' },
-    { expenseId:'E004', date: offsetDate(todayStr(), -5), item:'Book Purchase',         amount:14.99, timestamp: offsetDate(todayStr(), -5)+'T14:20:00Z' },
-    { expenseId:'E005', date: offsetDate(todayStr(), -7), item:'Monthly Gym Membership',amount:45.00, timestamp: offsetDate(todayStr(), -7)+'T09:00:00Z' },
-    { expenseId:'E006', date: offsetDate(todayStr(), -9), item:'Protein & Supplements', amount:34.50, timestamp: offsetDate(todayStr(), -9)+'T11:00:00Z' }
-  ];
+  var SEED_EXPENSES = [];
 
   // ── LOCAL DATABASE ─────────────────────────────────────────
   var db = {
@@ -88,23 +51,26 @@
 
     init: function() {
       try {
+        // Enforce Day 0 clean start (purge any previous dummy seed data)
+        if (localStorage.getItem('ht_clean_v3') !== 'true') {
+          localStorage.removeItem(KEYS.TASKS);
+          localStorage.removeItem(KEYS.LOGS);
+          localStorage.removeItem(KEYS.OVERRIDES);
+          localStorage.removeItem(KEYS.EXPENSES);
+          localStorage.setItem('ht_clean_v3', 'true');
+        }
+
         var st = localStorage.getItem(KEYS.TASKS);
         if (st) {
           this.tasks    = JSON.parse(localStorage.getItem(KEYS.TASKS)    || '[]');
           this.logs     = JSON.parse(localStorage.getItem(KEYS.LOGS)     || '[]');
           this.overrides= JSON.parse(localStorage.getItem(KEYS.OVERRIDES)|| '[]');
           this.expenses = JSON.parse(localStorage.getItem(KEYS.EXPENSES) || '[]');
-          if (!this.tasks.length) {
-            this.tasks    = SEED_TASKS.slice();
-            this.logs     = seedLogs();
-            this.overrides= SEED_OVERRIDES.slice();
-            this.expenses = SEED_EXPENSES.slice();
-          }
         } else {
-          this.tasks    = SEED_TASKS.slice();
-          this.logs     = seedLogs();
-          this.overrides= SEED_OVERRIDES.slice();
-          this.expenses = SEED_EXPENSES.slice();
+          this.tasks    = [];
+          this.logs     = [];
+          this.overrides= [];
+          this.expenses = [];
         }
         // Normalize any old expense records (item vs description)
         this.expenses.forEach(function(e) {
@@ -115,10 +81,10 @@
         this._saveAll();
       } catch(e) {
         console.warn('DB init error:', e);
-        this.tasks    = SEED_TASKS.slice();
-        this.logs     = seedLogs();
-        this.overrides= SEED_OVERRIDES.slice();
-        this.expenses = SEED_EXPENSES.slice();
+        this.tasks    = [];
+        this.logs     = [];
+        this.overrides= [];
+        this.expenses = [];
         this._createLogsForDate(todayStr());
       }
     },
@@ -132,7 +98,16 @@
         // Real-time sync with native Android Home Screen Widgets if running in APK
         if (window.AndroidBridge && typeof window.AndroidBridge.syncData === 'function') {
           var ds = todayStr();
-          var todayHabits = this.logs.filter(function(l){ return l.date === ds; });
+          var todayHabits = this.logs.filter(function(l){ return l.date === ds; }).map(function(l) {
+            return {
+              logId: l.logId,
+              taskId: l.taskId || '',
+              taskName: l.taskName,
+              status: l.status,
+              isAdhoc: !!l.isAdhoc,
+              date: l.date
+            };
+          });
           var ovr = this.getOverride ? this.getOverride(ds) : null;
           var dayType = ovr ? ovr.dayType : 'Normal';
           window.AndroidBridge.syncData(JSON.stringify(todayHabits), JSON.stringify(this.expenses), dayType);
@@ -763,12 +738,34 @@
     },
 
     _bindTopBar: function() {
+      // Sandwich Drawer Controls
+      var menuToggle = document.getElementById('btn-menu-toggle');
+      var menuClose = document.getElementById('btn-menu-close');
+      var drawer = document.getElementById('sandwich-drawer');
+      var backdrop = document.getElementById('sandwich-backdrop');
+
+      var openDrawer = function() {
+        if (drawer) drawer.classList.add('open');
+        if (backdrop) backdrop.classList.add('open');
+      };
+      var closeDrawer = function() {
+        if (drawer) drawer.classList.remove('open');
+        if (backdrop) backdrop.classList.remove('open');
+      };
+
+      if (menuToggle) menuToggle.addEventListener('click', openDrawer);
+      if (menuClose) menuClose.addEventListener('click', closeDrawer);
+      if (backdrop) backdrop.addEventListener('click', closeDrawer);
+
       // Theme Toggle (Light / Dark)
       var themeBtn = document.getElementById('btn-theme-toggle');
       var applyTheme = function(theme) {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('habittrack_theme', theme);
-        if (themeBtn) themeBtn.textContent = theme === 'light' ? '☀️ Light' : '🌙 Dark';
+        var labelEl = themeBtn ? themeBtn.querySelector('.drawer-item-label') : null;
+        var iconEl = themeBtn ? themeBtn.querySelector('.drawer-item-icon') : null;
+        if (labelEl) labelEl.textContent = theme === 'light' ? 'Light Theme Active' : 'Dark Theme Active';
+        if (iconEl) iconEl.textContent = theme === 'light' ? '☀️' : '🌙';
       };
       var savedTheme = localStorage.getItem('habittrack_theme') || 'dark';
       applyTheme(savedTheme);
@@ -776,29 +773,52 @@
         themeBtn.addEventListener('click', function() {
           var cur = document.documentElement.getAttribute('data-theme') || 'dark';
           applyTheme(cur === 'light' ? 'dark' : 'light');
+          closeDrawer();
         });
       }
 
       var dlBtn = document.getElementById('btn-download-xlsx');
       if (dlBtn) dlBtn.addEventListener('click', function() {
+        closeDrawer();
         excelBridge.downloadXlsx();
         ui._toast('Exported 4-sheet Habit_Expense_Tracker.xlsx', 'success');
       });
 
       var bindBtn = document.getElementById('btn-bind-file');
       if (bindBtn) bindBtn.addEventListener('click', async function() {
+        closeDrawer();
         var ok = await excelBridge.bindLocalFile();
         if (ok) ui._toast('Bound to local disk file for auto-saving!', 'success');
         else     ui._toast('Bind cancelled or not supported.', 'info');
       });
 
       var impBtn = document.getElementById('btn-import-modal');
-      if (impBtn) impBtn.addEventListener('click', function() { ui._openModal('modal-import'); });
+      if (impBtn) impBtn.addEventListener('click', function() {
+        closeDrawer();
+        ui._openModal('modal-import');
+      });
 
       var habBtn = document.getElementById('btn-manage-master');
       if (habBtn) habBtn.addEventListener('click', function() {
+        closeDrawer();
         ui._renderMasterModal();
         ui._openModal('modal-master-tasks');
+      });
+
+      var resetBtn = document.getElementById('btn-reset-data');
+      if (resetBtn) resetBtn.addEventListener('click', function() {
+        closeDrawer();
+        if (confirm('Clear all habits & expenses to start fresh from Day 0?')) {
+          localStorage.clear();
+          localStorage.setItem('ht_clean_v3', 'true');
+          db.tasks = [];
+          db.logs = [];
+          db.overrides = [];
+          db.expenses = [];
+          db._saveAll();
+          ui._render();
+          ui._toast('All data cleared. Streaks started from Day 0.', 'info');
+        }
       });
     },
 
@@ -1438,11 +1458,72 @@
     }
   };
 
+  // ── TWO-WAY NATIVE WIDGET SYNCHRONIZER ─────────────────────
+  window.syncFromNativeWidget = function() {
+    if (!window.AndroidBridge) return;
+    try {
+      var changed = false;
+
+      // 1. Ingest any habit checkbox toggles clicked on home screen widget
+      if (typeof window.AndroidBridge.getPendingToggles === 'function') {
+        var togglesStr = window.AndroidBridge.getPendingToggles();
+        if (togglesStr && togglesStr !== '{}') {
+          var toggles = JSON.parse(togglesStr);
+          for (var logId in toggles) {
+            var newStatus = toggles[logId];
+            var targetLog = db.logs.find(function(l){ return l.logId === logId; });
+            if (targetLog && targetLog.status !== newStatus) {
+              targetLog.status = newStatus;
+              targetLog.completionTimestamp = (newStatus === 'Completed' ? new Date().toISOString() : null);
+              changed = true;
+            }
+          }
+          if (typeof window.AndroidBridge.clearPendingToggles === 'function') {
+            window.AndroidBridge.clearPendingToggles();
+          }
+        }
+      }
+
+      // 2. Ingest any expenses logged directly from widget
+      if (typeof window.AndroidBridge.getPendingExpenses === 'function') {
+        var expStr = window.AndroidBridge.getPendingExpenses();
+        if (expStr && expStr !== '[]') {
+          var pendingExpenses = JSON.parse(expStr);
+          if (Array.isArray(pendingExpenses) && pendingExpenses.length > 0) {
+            pendingExpenses.forEach(function(pe) {
+              db.expenses.unshift({
+                expenseId: pe.expenseId || ('E_' + Date.now()),
+                date: pe.date || todayStr(),
+                item: pe.item || 'Quick Expense',
+                amount: parseFloat(pe.amount) || 0,
+                timestamp: pe.timestamp || new Date().toISOString()
+              });
+            });
+            changed = true;
+            if (typeof window.AndroidBridge.clearPendingExpenses === 'function') {
+              window.AndroidBridge.clearPendingExpenses();
+            }
+          }
+        }
+      }
+
+      if (changed) {
+        db._saveAll();
+        if (window.ui && typeof window.ui._render === 'function') {
+          window.ui._render();
+        }
+      }
+    } catch(err) {
+      console.warn('Native widget sync error:', err);
+    }
+  };
+
   // ── BOOTSTRAP ─────────────────────────────────────────────
   function startApp() {
     try {
       db.init();
       ui.init();
+      window.syncFromNativeWidget();
       excelBridge._notify('Habit_Expense_Tracker.xlsx ready');
       console.log('✅ HabitTrack loaded smoothly.');
     } catch(e) {

@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="@drawable/widget_background_dark">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="💳 Quick Log Expense"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btn_dialog_close"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:text="✕"
+            android:textColor="#94A3B8"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+    </LinearLayout>
+
+    <!-- Quick Preset Amount Chips -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="QUICK PRESETS"
+        android:textColor="#64748B"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="6dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="14dp">
+
+        <TextView
+            android:id="@+id/chip_amt_20"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="+₹20"
+            android:textColor="#06B6D4"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/chip_amt_50"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="+₹50"
+            android:textColor="#06B6D4"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/chip_amt_100"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="+₹100"
+            android:textColor="#06B6D4"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/chip_amt_200"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="+₹200"
+            android:textColor="#06B6D4"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/chip_amt_500"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:text="+₹500"
+            android:textColor="#06B6D4"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+    </LinearLayout>
+
+    <!-- Amount Input -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="AMOUNT (₹)"
+        android:textColor="#64748B"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/input_expense_amount"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:inputType="numberDecimal"
+        android:hint="0.00"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#475569"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:background="@drawable/widget_chip_bg"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Description / Item Input -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ITEM / CATEGORY"
+        android:textColor="#64748B"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/input_expense_item"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:inputType="textCapSentences"
+        android:hint="e.g. Chai, Lunch, Auto"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#475569"
+        android:textSize="14sp"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:background="@drawable/widget_chip_bg"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Quick Category Chips -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="18dp">
+
+        <TextView
+            android:id="@+id/chip_cat_chai"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:layout_marginEnd="6dp"
+            android:text="☕ Chai"
+            android:textColor="#94A3B8"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/chip_cat_food"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:layout_marginEnd="6dp"
+            android:text="🍱 Lunch"
+            android:textColor="#94A3B8"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/chip_cat_groceries"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:layout_marginEnd="6dp"
+            android:text="🛒 Grocery"
+            android:textColor="#94A3B8"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/chip_cat_travel"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="🚕 Travel"
+            android:textColor="#94A3B8"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:background="@drawable/widget_chip_bg" />
+    </LinearLayout>
+
+    <!-- Save & Cancel Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_cancel_expense"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="Cancel"
+            android:textColor="#94A3B8"
+            android:background="@drawable/widget_chip_bg"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btn_save_expense"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1.6"
+            android:text="Save Expense"
+            android:textColor="#0B0F17"
+            android:background="#06B6D4"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>
+

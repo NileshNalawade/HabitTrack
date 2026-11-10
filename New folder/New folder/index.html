@@ -46,36 +46,93 @@
       </div>
     </div>
 
-    <!-- Sync Status & Master Controls -->
+    <!-- Sandwich Menu Toggle Button -->
     <div class="topbar-actions">
-      <button class="btn-topbar theme-toggle-btn" id="btn-theme-toggle" title="Toggle Light / Dark Theme">
-        🌙 Theme
-      </button>
-
-      <div class="sync-status-box">
-        <div class="sync-pill synced" id="sync-status-pill">
-          <span class="sync-dot active"></span> Excel Synced
-        </div>
-        <span class="sync-time" id="sync-time-label">Auto-saved to Habit_Expense_Tracker.xlsx</span>
-      </div>
-
-      <button class="btn-topbar" id="btn-download-xlsx" title="Download master 4-sheet .xlsx file">
-        📥 Export .xlsx
-      </button>
-
-      <button class="btn-topbar" id="btn-bind-file" title="Link to local file on disk via File System Access API for silent background writes">
-        💾 Bind Disk
-      </button>
-
-      <button class="btn-topbar" id="btn-import-modal" title="Import modified Excel or CSV file">
-        📤 Import
-      </button>
-
-      <button class="btn-topbar" id="btn-manage-master" title="Manage Recurring Master Habits">
-        ⚙️ Habits
+      <button class="btn-topbar sandwich-btn" id="btn-menu-toggle" aria-label="Open Navigation Menu" title="Menu">
+        <span class="sandwich-line"></span>
+        <span class="sandwich-line"></span>
+        <span class="sandwich-line"></span>
       </button>
     </div>
   </header>
+
+  <!-- Collapsible Sandwich Drawer Overlay & Menu -->
+  <div class="sandwich-backdrop" id="sandwich-backdrop"></div>
+  <aside class="sandwich-drawer" id="sandwich-drawer">
+    <div class="drawer-header">
+      <div class="drawer-brand">
+        <span class="drawer-brand-icon">⚡</span>
+        <span class="drawer-brand-title">Menu &amp; Tools</span>
+      </div>
+      <button class="drawer-close-btn" id="btn-menu-close" aria-label="Close Menu">✕</button>
+    </div>
+
+    <!-- Sync status pill inside drawer -->
+    <div class="drawer-sync-box">
+      <div class="sync-pill synced" id="sync-status-pill">
+        <span class="sync-dot active"></span> Excel Synced
+      </div>
+      <span class="sync-time" id="sync-time-label">Auto-saved to Habit_Expense_Tracker.xlsx</span>
+    </div>
+
+    <div class="drawer-divider"></div>
+
+    <nav class="drawer-menu-list">
+      <button class="drawer-item" id="btn-theme-toggle">
+        <span class="drawer-item-icon">🌙</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Toggle Theme</span>
+          <span class="drawer-item-sub">Switch between Light &amp; Dark</span>
+        </div>
+      </button>
+
+      <button class="drawer-item" id="btn-manage-master">
+        <span class="drawer-item-icon">⚙️</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Master Habits</span>
+          <span class="drawer-item-sub">Manage recurring habit list</span>
+        </div>
+      </button>
+
+      <button class="drawer-item" id="btn-download-xlsx">
+        <span class="drawer-item-icon">📥</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Export .xlsx</span>
+          <span class="drawer-item-sub">Download master 4-sheet Excel workbook</span>
+        </div>
+      </button>
+
+      <button class="drawer-item" id="btn-bind-file">
+        <span class="drawer-item-icon">💾</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Bind Disk</span>
+          <span class="drawer-item-sub">Direct file write via File System API</span>
+        </div>
+      </button>
+
+      <button class="drawer-item" id="btn-import-modal">
+        <span class="drawer-item-icon">📤</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Import Data</span>
+          <span class="drawer-item-sub">Import from Excel or CSV backup</span>
+        </div>
+      </button>
+
+      <div class="drawer-divider"></div>
+
+      <button class="drawer-item text-danger" id="btn-reset-data">
+        <span class="drawer-item-icon">🗑️</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Reset All Data</span>
+          <span class="drawer-item-sub">Clear all records and start streaks from Day 0</span>
+        </div>
+      </button>
+    </nav>
+
+    <div class="drawer-footer">
+      <span>HabitTrack v2.1 • 100% Offline</span>
+    </div>
+  </aside>
 
   <!-- Main View Container -->
   <main class="app-main">

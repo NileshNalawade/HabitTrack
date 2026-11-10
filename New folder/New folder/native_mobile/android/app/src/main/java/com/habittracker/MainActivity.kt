@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                syncNativeWidgetToWebView()
                 handleDeepLink(intent)
             }
         }
@@ -50,6 +51,15 @@ class MainActivity : AppCompatActivity() {
 
         // Load offline bundled app
         webView.loadUrl("file:///android_asset/index.html")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        syncNativeWidgetToWebView()
+    }
+
+    private fun syncNativeWidgetToWebView() {
+        webView.evaluateJavascript("if (typeof window.syncFromNativeWidget === 'function') { window.syncFromNativeWidget(); }", null)
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -87,28 +97,34 @@ class MainActivity : AppCompatActivity() {
         }
 
         @JavascriptInterface
+        fun getPendingToggles(): String {
+            return WidgetDataHelper.getPendingTogglesJson(context)
+        }
+
+        @JavascriptInterface
+        fun clearPendingToggles() {
+            WidgetDataHelper.clearPendingToggles(context)
+        }
+
+        @JavascriptInterface
+        fun getPendingExpenses(): String {
+            return WidgetDataHelper.getPendingExpensesJson(context)
+        }
+
+        @JavascriptInterface
+        fun clearPendingExpenses() {
+            WidgetDataHelper.clearPendingExpenses(context)
+        }
+
+        @JavascriptInterface
         fun getWidgetDayType(): String {
             return WidgetDataHelper.getDayType(context)
         }
 
         @JavascriptInterface
         fun notifyDataChanged() {
-            // Refresh Habit Widget
-            val habitManager = AppWidgetManager.getInstance(context)
-            val habitIds = habitManager.getAppWidgetIds(ComponentName(context, HabitWidgetProvider::class.java))
-            val habitIntent = Intent(context, HabitWidgetProvider::class.java).apply {
-                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, habitIds)
-            }
-            context.sendBroadcast(habitIntent)
-
-            // Refresh Expense Widget
-            val expenseIds = habitManager.getAppWidgetIds(ComponentName(context, ExpenseWidgetProvider::class.java))
-            val expenseIntent = Intent(context, ExpenseWidgetProvider::class.java).apply {
-                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, expenseIds)
-            }
-            context.sendBroadcast(expenseIntent)
+            WidgetDataHelper.refreshHabitWidget(context)
+            WidgetDataHelper.refreshExpenseWidget(context)
         }
     }
 }

@@ -58,10 +58,18 @@
                 android:resource="@xml/expense_widget_info" />
         </receiver>
 
-        <!-- Background Action Receiver for 1-Tap Widget Completion -->
+        <!-- Background Action Receiver for 1-Tap Widget Completion & Quick Logging -->
         <receiver
             android:name=".widget.WidgetActionReceiver"
             android:exported="false" />
+
+        <!-- Floating Quick Expense Dialog Activity (Direct floating modal from widget without launching main app) -->
+        <activity
+            android:name=".widget.QuickExpenseActivity"
+            android:theme="@style/Theme.QuickExpenseDialog"
+            android:exported="false"
+            android:windowSoftInputMode="stateVisible|adjustResize"
+            android:excludeFromRecents="true" />
 
     </application>
 

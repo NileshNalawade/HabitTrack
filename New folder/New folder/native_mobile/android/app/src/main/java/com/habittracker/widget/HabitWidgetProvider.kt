@@ -73,29 +73,34 @@ class HabitWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.btn_widget_today_only, todayOnlyPendingIntent)
 
-            // 4. Render ALL Tasks for today (no 4-task limit!)
+            // 4. Render Tasks for today or empty state (never blank!)
             views.removeAllViews(R.id.widget_task_container)
 
-            todayData.tasks.forEach { task ->
-                val rowView = RemoteViews(context.packageName, R.layout.widget_task_row_item)
-                rowView.setTextViewText(R.id.widget_item_text, task.name)
+            if (todayData.tasks.isEmpty()) {
+                val emptyView = RemoteViews(context.packageName, R.layout.widget_empty_state_row)
+                views.addView(R.id.widget_task_container, emptyView)
+            } else {
+                todayData.tasks.forEach { task ->
+                    val rowView = RemoteViews(context.packageName, R.layout.widget_task_row_item)
+                    rowView.setTextViewText(R.id.widget_item_text, task.name)
 
-                val checkIcon = if (task.isCompleted) R.drawable.ic_check_circle else R.drawable.ic_circle_outline
-                rowView.setImageViewResource(R.id.widget_item_btn_check, checkIcon)
+                    val checkIcon = if (task.isCompleted) R.drawable.ic_check_circle else R.drawable.ic_circle_outline
+                    rowView.setImageViewResource(R.id.widget_item_btn_check, checkIcon)
 
-                val intent = Intent(context, WidgetActionReceiver::class.java).apply {
-                    action = WidgetActionReceiver.ACTION_TOGGLE_HABIT
-                    putExtra(WidgetActionReceiver.EXTRA_LOG_ID, task.logId)
+                    val intent = Intent(context, WidgetActionReceiver::class.java).apply {
+                        action = WidgetActionReceiver.ACTION_TOGGLE_HABIT
+                        putExtra(WidgetActionReceiver.EXTRA_LOG_ID, task.logId)
+                    }
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        context,
+                        task.logId.hashCode(),
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    rowView.setOnClickPendingIntent(R.id.widget_item_btn_check, pendingIntent)
+
+                    views.addView(R.id.widget_task_container, rowView)
                 }
-                val pendingIntent = PendingIntent.getBroadcast(
-                    context,
-                    task.logId.hashCode(),
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                rowView.setOnClickPendingIntent(R.id.widget_item_btn_check, pendingIntent)
-
-                views.addView(R.id.widget_task_container, rowView)
             }
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
