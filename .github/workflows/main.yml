@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -71,17 +71,18 @@ jobs:
           echo "Building Android project at: $PROJECT_DIR"
           cd "$PROJECT_DIR"
 
-          # 4. Enable AndroidX & memory config in gradle.properties
-          echo "android.useAndroidX=true" > gradle.properties
-          echo "android.enableJetifier=true" >> gradle.properties
-          echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> gradle.properties
+          # 4. Append AndroidX & memory config safely without wiping existing properties
+          echo "" >> gradle.properties
+          grep -q "android.useAndroidX" gradle.properties || echo "android.useAndroidX=true" >> gradle.properties
+          grep -q "android.enableJetifier" gradle.properties || echo "android.enableJetifier=true" >> gradle.properties
+          grep -q "org.gradle.jvmargs" gradle.properties || echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> gradle.properties
 
           # 5. Clean loose root Kotlin files
           rm -f *.kt 2>/dev/null || true
           touch app/proguard-rules.pro 2>/dev/null || true
 
-          # 6. Build APK
-          gradle assembleDebug --stacktrace
+          # 6. Build APK with full stacktrace and info logging to pinpoint failure
+          gradle assembleDebug --info --stacktrace
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
