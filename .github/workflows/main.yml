@@ -81,8 +81,8 @@ jobs:
           rm -f *.kt 2>/dev/null || true
           touch app/proguard-rules.pro 2>/dev/null || true
 
-          # 6. Build APK with stacktrace and debug info to capture exact failure
-          gradle assembleDebug --stacktrace --info
+          # 6. Build APK with plain console output to surface the root failure message clearly
+          gradle assembleDebug --stacktrace --console=plain
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
