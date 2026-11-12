@@ -60,10 +60,14 @@ jobs:
           # 4. Strip invalid windowSoftInputMode from all styles.xml
           find "$BUILD_DIR" -name "styles.xml" -exec sed -i '/windowSoftInputMode/d' {} +
 
-          # 5. Strip any legacy ghost AppDatabase / ExcelSyncBridge references
-          find "$BUILD_DIR" -name "*.kt" -exec sed -i '/AppDatabase/d' {} +
-          find "$BUILD_DIR" -name "*.kt" -exec sed -i '/ExcelSyncBridge/d' {} +
-          find "$BUILD_DIR" -name "*.kt" -exec sed -i '/db\.dailyLogsDao/d' {} +
+          # 5. Ensure valid button drawable exists
+          cat << 'EOF' > "$BUILD_DIR/app/src/main/res/drawable/btn_primary_bg.xml"
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#06B6D4" />
+              <corners android:radius="8dp" />
+          </shape>
+          EOF
 
           # 6. Sanitize app/build.gradle: remove undefined signingConfigs.debug and add lint options
           BG_FILE="$BUILD_DIR/app/build.gradle"
@@ -74,7 +78,73 @@ jobs:
             fi
           fi
 
-          # 7. Sync latest web assets into app assets
+          # 7. Inject clean WidgetActionReceiver.kt (purges any lingering AppDatabase references)
+          REC_DIR="$BUILD_DIR/app/src/main/java/com/habittracker/widget"
+          mkdir -p "$REC_DIR"
+          cat << 'EOF' > "$REC_DIR/WidgetActionReceiver.kt"
+          package com.habittracker.widget
+
+          import android.content.BroadcastReceiver
+          import android.content.Context
+          import android.content.Intent
+          import android.widget.Toast
+          import com.habittracker.data.WidgetDataHelper
+
+          class WidgetActionReceiver : BroadcastReceiver() {
+              override fun onReceive(context: Context, intent: Intent) {
+                  when (intent.action) {
+                      ACTION_TOGGLE_HABIT -> {
+                          val logId = intent.getStringExtra(EXTRA_LOG_ID) ?: return
+                          WidgetDataHelper.toggleHabit(context, logId)
+                          WidgetDataHelper.refreshHabitWidget(context)
+                      }
+                      ACTION_CYCLE_DAY_TYPE -> {
+                          val nextType = WidgetDataHelper.cycleDayType(context)
+                          WidgetDataHelper.refreshHabitWidget(context)
+                          Toast.makeText(context, "Day set to: $nextType", Toast.LENGTH_SHORT).show()
+                      }
+                      ACTION_QUICK_ADD_20 -> {
+                          WidgetDataHelper.addExpense(context, "Quick Spend", 20.0)
+                          val total = WidgetDataHelper.getTodayExpenseTotal(context)
+                          Toast.makeText(context, "Added +₹20.00! Today: ₹${String.format("%.2f", total)}", Toast.LENGTH_SHORT).show()
+                      }
+                      ACTION_QUICK_ADD_50 -> {
+                          WidgetDataHelper.addExpense(context, "Quick Spend", 50.0)
+                          val total = WidgetDataHelper.getTodayExpenseTotal(context)
+                          Toast.makeText(context, "Added +₹50.00! Today: ₹${String.format("%.2f", total)}", Toast.LENGTH_SHORT).show()
+                      }
+                      ACTION_QUICK_ADD_100 -> {
+                          WidgetDataHelper.addExpense(context, "Quick Spend", 100.0)
+                          val total = WidgetDataHelper.getTodayExpenseTotal(context)
+                          Toast.makeText(context, "Added +₹100.00! Today: ₹${String.format("%.2f", total)}", Toast.LENGTH_SHORT).show()
+                      }
+                      ACTION_QUICK_ADD_200 -> {
+                          WidgetDataHelper.addExpense(context, "Quick Spend", 200.0)
+                          val total = WidgetDataHelper.getTodayExpenseTotal(context)
+                          Toast.makeText(context, "Added +₹200.00! Today: ₹${String.format("%.2f", total)}", Toast.LENGTH_SHORT).show()
+                      }
+                      ACTION_QUICK_ADD_500 -> {
+                          WidgetDataHelper.addExpense(context, "Quick Spend", 500.0)
+                          val total = WidgetDataHelper.getTodayExpenseTotal(context)
+                          Toast.makeText(context, "Added +₹500.00! Today: ₹${String.format("%.2f", total)}", Toast.LENGTH_SHORT).show()
+                      }
+                  }
+              }
+
+              companion object {
+                  const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGGLE_HABIT"
+                  const val ACTION_CYCLE_DAY_TYPE = "com.habittracker.ACTION_CYCLE_DAY_TYPE"
+                  const val ACTION_QUICK_ADD_20 = "com.habittracker.ACTION_QUICK_ADD_20"
+                  const val ACTION_QUICK_ADD_50 = "com.habittracker.ACTION_QUICK_ADD_50"
+                  const val ACTION_QUICK_ADD_100 = "com.habittracker.ACTION_QUICK_ADD_100"
+                  const val ACTION_QUICK_ADD_200 = "com.habittracker.ACTION_QUICK_ADD_200"
+                  const val ACTION_QUICK_ADD_500 = "com.habittracker.ACTION_QUICK_ADD_500"
+                  const val EXTRA_LOG_ID = "com.habittracker.EXTRA_LOG_ID"
+              }
+          }
+          EOF
+
+          # 8. Sync latest web assets into app assets
           WEB_INDEX=$(find . -name "index.html" -not -path "*/assets/*" -not -path "*/build/*" | head -n 1)
           if [ -n "$WEB_INDEX" ]; then
             WEB_ROOT=$(dirname "$WEB_INDEX")
@@ -87,7 +157,7 @@ jobs:
             [ -f "$WEB_ROOT/manifest.json" ] && cp -f "$WEB_ROOT/manifest.json" "$ASSET_DIR/" 2>/dev/null || true
           fi
 
-          # 8. Configure local.properties and gradle.properties
+          # 9. Configure local.properties and gradle.properties
           echo "sdk.dir=$ANDROID_HOME" > "$BUILD_DIR/local.properties"
           touch "$BUILD_DIR/gradle.properties"
           grep -q "android.useAndroidX" "$BUILD_DIR/gradle.properties" || echo "android.useAndroidX=true" >> "$BUILD_DIR/gradle.properties"
@@ -116,7 +186,7 @@ jobs:
           if [ $BUILD_STATUS -ne 0 ]; then
             echo "## ❌ Gradle Build Failed" >> $GITHUB_STEP_SUMMARY
             echo '```text' >> $GITHUB_STEP_SUMMARY
-            grep -E -C 3 -i "(FAILURE|Exception|error:|AAPT:|Unresolved reference)" "$RUNNER_TEMP/build.log" | tail -n 50 >> $GITHUB_STEP_SUMMARY
+            grep -E "(^e: |^w: |FAILURE:|Exception|error:)" "$RUNNER_TEMP/build.log" | head -n 40 >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             exit $BUILD_STATUS
           fi
