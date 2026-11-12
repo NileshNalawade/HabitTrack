@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -25,68 +25,81 @@ jobs:
           gradle-version: 8.5
           cache-disabled: true
 
-      - name: Build Android APK
+      - name: Locate and Prepare Android Project
         run: |
-          # 1. Unpack any zip file found anywhere in repository
-          find . -name "*.zip" | while read -r zipfile; do
-            echo "Unpacking $zipfile..."
-            unzip -o "$zipfile" || true
-          done
+          # 1. Locate settings.gradle first
+          SETTINGS_FILE=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
 
-          # 2. Overwrite all nested folders with latest code & assets
-          if [ -d "native_mobile/android" ]; then
-            for old_android in $(find . -type d -path "*/native_mobile/android" -not -path "./native_mobile/android"); do
-              echo "Overwriting stale $old_android with updated code..."
-              cp -rf native_mobile/android/* "$old_android/" 2>/dev/null || true
+          # Only unpack zip if settings.gradle is not already directly in the repository
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "settings.gradle not found in repository, inspecting zip archives..."
+            find . -name "*.zip" | while read -r zipfile; do
+              echo "Unpacking $zipfile..."
+              unzip -o "$zipfile" || true
             done
+            SETTINGS_FILE=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
           fi
 
-          for assetdir in $(find . -type d -name "assets" -path "*/app/src/main/assets"); do
-            echo "Injecting updated web assets into $assetdir..."
-            cp -f index.html "$assetdir/index.html" 2>/dev/null || true
-            cp -rf css "$assetdir/" 2>/dev/null || true
-            cp -rf js "$assetdir/" 2>/dev/null || true
-          done
-
-          # 3. Target the project with versionCode 3
-          TARGET=""
-          for bg in $(find . -name "build.gradle" -path "*/app/build.gradle" -not -path "*/build/*"); do
-            if grep -q "versionCode 3" "$bg" 2>/dev/null; then
-              TARGET=$(dirname $(dirname "$bg"))
-              echo "Found v3 project at: $TARGET"
-              break
-            fi
-          done
-
-          if [ -z "$TARGET" ]; then
-            echo "========================================================================"
-            echo "ERROR: Version 3 was NOT found!"
-            echo "This means HabitTrack_Updated.zip was not uploaded to this commit."
-            echo "Please upload HabitTrack_Updated.zip to GitHub via Add file -> Upload files."
-            echo "========================================================================"
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "ERROR: Android project settings.gradle could not be found anywhere!"
             exit 1
           fi
 
-          PROJECT_DIR="$TARGET"
-          echo "Building Android project at: $PROJECT_DIR"
+          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          echo "Found Android project at: $PROJECT_DIR"
+
+          # 2. Clean up any loose .kt files or ghost res folders at the Android root
+          rm -f "$PROJECT_DIR"/*.kt 2>/dev/null || true
+          rm -rf "$PROJECT_DIR"/res 2>/dev/null || true
+
+          # 3. Sanitize any legacy invalid attributes in styles.xml and old references
+          for sfile in $(find "$PROJECT_DIR" -name "styles.xml"); do
+            sed -i '/windowSoftInputMode/d' "$sfile" 2>/dev/null || true
+          done
+
+          REC="$PROJECT_DIR/app/src/main/java/com/habittracker/widget/WidgetActionReceiver.kt"
+          if grep -q "AppDatabase" "$REC" 2>/dev/null; then
+            echo "Sanitizing old AppDatabase reference in $REC..."
+            sed -i '/AppDatabase/d' "$REC" 2>/dev/null || true
+            sed -i '/ExcelSyncBridge/d' "$REC" 2>/dev/null || true
+          fi
+
+          # 4. Sync latest web assets into app assets
+          for assetdir in $(find "$PROJECT_DIR" -type d -name "assets" -path "*/app/src/main/assets"); do
+            echo "Injecting updated web assets into $assetdir..."
+            WEB_DIR=$(find . -name "index.html" -not -path "*/assets/*" -not -path "*/build/*" | head -n 1)
+            if [ -n "$WEB_DIR" ]; then
+              SRC_DIR=$(dirname "$WEB_DIR")
+              cp -f "$SRC_DIR/index.html" "$assetdir/index.html" 2>/dev/null || true
+              [ -d "$SRC_DIR/css" ] && cp -rf "$SRC_DIR/css" "$assetdir/" 2>/dev/null || true
+              [ -d "$SRC_DIR/js" ] && cp -rf "$SRC_DIR/js" "$assetdir/" 2>/dev/null || true
+              [ -d "$SRC_DIR/icons" ] && cp -rf "$SRC_DIR/icons" "$assetdir/" 2>/dev/null || true
+              [ -f "$SRC_DIR/manifest.json" ] && cp -f "$SRC_DIR/manifest.json" "$assetdir/" 2>/dev/null || true
+            fi
+          done
+
+          # 5. Ensure gradle.properties configuration
+          touch "$PROJECT_DIR/gradle.properties"
+          grep -q "android.useAndroidX" "$PROJECT_DIR/gradle.properties" || echo "android.useAndroidX=true" >> "$PROJECT_DIR/gradle.properties"
+          grep -q "android.enableJetifier" "$PROJECT_DIR/gradle.properties" || echo "android.enableJetifier=true" >> "$PROJECT_DIR/gradle.properties"
+          grep -q "org.gradle.jvmargs" "$PROJECT_DIR/gradle.properties" || echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> "$PROJECT_DIR/gradle.properties"
+
+          # 6. Ensure gradlew is executable
+          chmod +x "$PROJECT_DIR/gradlew" 2>/dev/null || true
+
+      - name: Build Android APK with Gradle
+        run: |
           cd "$PROJECT_DIR"
-
-          # 4. Ensure gradle.properties exists and safely configure properties
-          touch gradle.properties
-          grep -q "android.useAndroidX" gradle.properties || echo "android.useAndroidX=true" >> gradle.properties
-          grep -q "android.enableJetifier" gradle.properties || echo "android.enableJetifier=true" >> gradle.properties
-          grep -q "org.gradle.jvmargs" gradle.properties || echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> gradle.properties
-
-          # 5. Clean loose root Kotlin files
-          rm -f *.kt 2>/dev/null || true
-          touch app/proguard-rules.pro 2>/dev/null || true
-
-          # 6. Build APK with plain console output to surface the root failure message clearly
-          gradle assembleDebug --stacktrace --console=plain
+          if [ -f "./gradlew" ]; then
+            ./gradlew assembleDebug --stacktrace --no-daemon --console=plain
+          else
+            gradle assembleDebug --stacktrace --no-daemon --console=plain
+          fi
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
         with:
-          name: HabitTrack-v2.1-NEW-APK
+          name: HabitTrack-APK
           path: "**/app/build/outputs/apk/**/*.apk"
           if-no-files-found: error
