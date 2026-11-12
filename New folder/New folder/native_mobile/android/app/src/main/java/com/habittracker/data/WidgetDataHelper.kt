@@ -14,6 +14,7 @@ import java.util.Locale
 
 data class HabitItem(
     val logId: String,
+    val taskId: String = "",
     val name: String,
     val isCompleted: Boolean,
     val isAdhoc: Boolean = false
@@ -34,7 +35,7 @@ object WidgetDataHelper {
     private const val KEY_PENDING_TOGGLES = "pending_toggles"
     private const val KEY_PENDING_EXPENSES = "pending_expenses"
 
-    private fun getTodayDateStr(): String {
+    fun getTodayDateStr(): String {
         return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
     }
 
@@ -42,12 +43,11 @@ object WidgetDataHelper {
      * Retrieves today's habits. Automatically checks if the date rolled over to a new day:
      * - Discards yesterday's "Today Only" (adhoc) tasks so they never leak into the next day.
      * - Resets recurring daily habits to "Pending".
-     * - Returns 0% progress and clean list (no dummy fallback data).
      */
     fun getTodayHabitSummary(context: Context): HabitSummary {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val today = getTodayDateStr()
-        val cachedDate = prefs.getString(KEY_DATE, "")
+        val cachedDate = prefs.getString(KEY_DATE, "") ?: ""
         val habitsJson = prefs.getString(KEY_HABITS, null)
 
         val taskList = mutableListOf<HabitItem>()
@@ -63,12 +63,13 @@ object WidgetDataHelper {
                     val obj = array.getJSONObject(i)
                     val isAdhoc = obj.optBoolean("isAdhoc", false)
 
-                    // On a new day, discard any "Today Only" (adhoc) tasks from yesterday!
+                    // On a new day, discard any "Today Only" (adhoc) tasks from yesterday
                     if (isNewDay && isAdhoc) {
                         continue
                     }
 
                     val logId = obj.optString("logId", "LOG_$i")
+                    val taskId = obj.optString("taskId", "")
                     val name = obj.optString("taskName", "Habit")
 
                     // On a new day, reset recurring habits to Pending
@@ -82,6 +83,7 @@ object WidgetDataHelper {
                     taskList.add(
                         HabitItem(
                             logId = logId,
+                            taskId = taskId,
                             name = name,
                             isCompleted = isCompleted,
                             isAdhoc = isAdhoc
@@ -96,6 +98,8 @@ object WidgetDataHelper {
                         .putString(KEY_DATE, today)
                         .remove(KEY_PENDING_TOGGLES) // Reset old day pending widget clicks
                         .apply()
+                } else if (cachedDate.isEmpty()) {
+                    prefs.edit().putString(KEY_DATE, today).apply()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -110,12 +114,51 @@ object WidgetDataHelper {
 
     /**
      * Saves habits, expenses, and dayType from the main web application.
+     * Safely preserves any pending widget toggles that have not yet synced into the web app,
+     * so they are never accidentally wiped out!
      */
     fun saveData(context: Context, habitsJson: String, expensesJson: String, dayType: String = "Normal") {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val today = getTodayDateStr()
+
+        // Merge any un-ingested pending toggles from the widget into the incoming habits JSON
+        val pendingStr = prefs.getString(KEY_PENDING_TOGGLES, "{}")
+        val mergedHabitsJson = if (!pendingStr.isNullOrBlank() && pendingStr != "{}") {
+            try {
+                val pendingObj = JSONObject(pendingStr)
+                val habitsArray = JSONArray(habitsJson)
+                for (i in 0 until habitsArray.length()) {
+                    val h = habitsArray.getJSONObject(i)
+                    val logId = h.optString("logId", "")
+                    val taskId = h.optString("taskId", "")
+                    val taskName = h.optString("taskName", "")
+
+                    var pendingStatus: String? = null
+                    if (logId.isNotEmpty() && pendingObj.has(logId)) {
+                        val v = pendingObj.get(logId)
+                        pendingStatus = if (v is JSONObject) v.optString("status") else v.toString()
+                    } else if (taskId.isNotEmpty() && pendingObj.has(taskId)) {
+                        val v = pendingObj.get(taskId)
+                        pendingStatus = if (v is JSONObject) v.optString("status") else v.toString()
+                    } else if (taskName.isNotEmpty() && pendingObj.has(taskName)) {
+                        val v = pendingObj.get(taskName)
+                        pendingStatus = if (v is JSONObject) v.optString("status") else v.toString()
+                    }
+
+                    if (pendingStatus != null) {
+                        h.put("status", pendingStatus)
+                    }
+                }
+                habitsArray.toString()
+            } catch (e: Exception) {
+                habitsJson
+            }
+        } else {
+            habitsJson
+        }
+
         prefs.edit()
-            .putString(KEY_HABITS, habitsJson)
+            .putString(KEY_HABITS, mergedHabitsJson)
             .putString(KEY_EXPENSES, expensesJson)
             .putString(KEY_DAY_TYPE, dayType)
             .putString(KEY_DATE, today)
@@ -145,29 +188,48 @@ object WidgetDataHelper {
      */
     fun toggleHabit(context: Context, logId: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val today = getTodayDateStr()
         val habitsJson = prefs.getString(KEY_HABITS, null) ?: return
 
         try {
             val array = JSONArray(habitsJson)
             var newStatus = "Pending"
+            var matchedTaskId = ""
+            var matchedTaskName = ""
+
             for (i in 0 until array.length()) {
                 val obj = array.getJSONObject(i)
-                if (obj.optString("logId") == logId) {
+                val currLogId = obj.optString("logId", "")
+                val currTaskId = obj.optString("taskId", "")
+                val currTaskName = obj.optString("taskName", "")
+
+                if (currLogId == logId || (currTaskId.isNotEmpty() && currTaskId == logId)) {
                     val current = obj.optString("status")
                     newStatus = if (current == "Completed") "Pending" else "Completed"
                     obj.put("status", newStatus)
+                    matchedTaskId = currTaskId
+                    matchedTaskName = currTaskName
                     break
                 }
             }
 
-            // Save updated habits JSON
+            // Save updated habits JSON and ensure KEY_DATE is today
             val editor = prefs.edit()
             editor.putString(KEY_HABITS, array.toString())
+            editor.putString(KEY_DATE, today)
 
             // Record in pending_toggles so MainActivity updates its local storage!
             val pendingStr = prefs.getString(KEY_PENDING_TOGGLES, "{}")
             val pendingObj = try { JSONObject(pendingStr ?: "{}") } catch (e: Exception) { JSONObject() }
-            pendingObj.put(logId, newStatus)
+            val itemInfo = JSONObject().apply {
+                put("status", newStatus)
+                put("logId", logId)
+                put("taskId", matchedTaskId)
+                put("taskName", matchedTaskName)
+            }
+            pendingObj.put(logId, itemInfo)
+            if (matchedTaskId.isNotEmpty()) pendingObj.put(matchedTaskId, itemInfo)
+            if (matchedTaskName.isNotEmpty()) pendingObj.put(matchedTaskName, itemInfo)
             editor.putString(KEY_PENDING_TOGGLES, pendingObj.toString())
 
             editor.apply()
@@ -189,7 +251,7 @@ object WidgetDataHelper {
         val newExp = JSONObject().apply {
             put("expenseId", "E_WIDGET_${System.currentTimeMillis()}")
             put("date", today)
-            put("item", item.ifBlank { "Quick Expense" })
+            put("item", item.ifBlank { "Quick Spend" })
             put("amount", amount)
             put("timestamp", timestamp)
         }
@@ -208,6 +270,7 @@ object WidgetDataHelper {
             prefs.edit()
                 .putString(KEY_EXPENSES, expArray.toString())
                 .putString(KEY_PENDING_EXPENSES, pendingArray.toString())
+                .putString(KEY_DATE, today)
                 .apply()
 
             // 3. Update the expense widget view immediately
