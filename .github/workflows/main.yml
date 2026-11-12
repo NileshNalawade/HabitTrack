@@ -65,10 +65,13 @@ jobs:
           find "$BUILD_DIR" -name "*.kt" -exec sed -i '/ExcelSyncBridge/d' {} +
           find "$BUILD_DIR" -name "*.kt" -exec sed -i '/db\.dailyLogsDao/d' {} +
 
-          # 6. Ensure lint does not fail debug build
+          # 6. Sanitize app/build.gradle: remove undefined signingConfigs.debug and add lint options
           BG_FILE="$BUILD_DIR/app/build.gradle"
-          if [ -f "$BG_FILE" ] && ! grep -q "abortOnError false" "$BG_FILE"; then
-            sed -i '/android {/a \    lint { abortOnError false; checkReleaseBuilds false }' "$BG_FILE"
+          if [ -f "$BG_FILE" ]; then
+            sed -i '/signingConfigs\.debug/d' "$BG_FILE"
+            if ! grep -q "abortOnError false" "$BG_FILE"; then
+              sed -i '/android {/a \    lint { abortOnError false; checkReleaseBuilds false }' "$BG_FILE"
+            fi
           fi
 
           # 7. Sync latest web assets into app assets
@@ -84,10 +87,10 @@ jobs:
             [ -f "$WEB_ROOT/manifest.json" ] && cp -f "$WEB_ROOT/manifest.json" "$ASSET_DIR/" 2>/dev/null || true
           fi
 
-          # 8. Configure gradle.properties
+          # 8. Configure local.properties and gradle.properties
+          echo "sdk.dir=$ANDROID_HOME" > "$BUILD_DIR/local.properties"
           touch "$BUILD_DIR/gradle.properties"
           grep -q "android.useAndroidX" "$BUILD_DIR/gradle.properties" || echo "android.useAndroidX=true" >> "$BUILD_DIR/gradle.properties"
-          grep -q "android.enableJetifier" "$BUILD_DIR/gradle.properties" || echo "android.enableJetifier=true" >> "$BUILD_DIR/gradle.properties"
           grep -q "org.gradle.jvmargs" "$BUILD_DIR/gradle.properties" || echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> "$BUILD_DIR/gradle.properties"
 
       - name: Build Android APK with Gradle
@@ -100,12 +103,22 @@ jobs:
             gradle wrapper --gradle-version 8.5 2>/dev/null || true
           fi
 
+          chmod +x gradlew 2>/dev/null || true
+
+          # Execute build and capture full log for direct summary reporting
           if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            chmod +x gradlew 2>/dev/null || true
-            ./gradlew assembleDebug --stacktrace --no-daemon --console=plain
+            ./gradlew assembleDebug --stacktrace --no-daemon --console=plain 2>&1 | tee "$RUNNER_TEMP/build.log"
           else
-            echo "Compiling directly with Gradle 8.5..."
-            gradle assembleDebug --stacktrace --no-daemon --console=plain
+            gradle assembleDebug --stacktrace --no-daemon --console=plain 2>&1 | tee "$RUNNER_TEMP/build.log"
+          fi
+          BUILD_STATUS=${PIPESTATUS[0]}
+
+          if [ $BUILD_STATUS -ne 0 ]; then
+            echo "## ❌ Gradle Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo '```text' >> $GITHUB_STEP_SUMMARY
+            grep -E -C 3 -i "(FAILURE|Exception|error:|AAPT:|Unresolved reference)" "$RUNNER_TEMP/build.log" | tail -n 50 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit $BUILD_STATUS
           fi
 
       - name: Upload HabitTrack APK
