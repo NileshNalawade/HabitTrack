@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_background_dark">
+
+    <!-- Header with Title & + Custom Button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="💳 Today's Spend"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btn_widget_open_dialog"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:text="+ Custom"
+            android:textColor="#06B6D4"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:background="@drawable/widget_chip_bg" />
+    </LinearLayout>
+
+    <!-- Running Total Display -->
+    <TextView
+        android:id="@+id/widget_expense_total_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="6dp"
+        android:text="₹0.00"
+        android:textColor="#06B6D4"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <!-- 1-Tap Direct Quick Add Buttons (Adds directly without opening ANY app!) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/btn_widget_quick_20"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="3dp"
+            android:text="+₹20"
+            android:textColor="#38BDF8"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/btn_widget_quick_50"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="3dp"
+            android:text="+₹50"
+            android:textColor="#38BDF8"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/btn_widget_quick_100"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="3dp"
+            android:text="+₹100"
+            android:textColor="#38BDF8"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/btn_widget_quick_200"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="3dp"
+            android:text="+₹200"
+            android:textColor="#38BDF8"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+
+        <TextView
+            android:id="@+id/btn_widget_quick_500"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="+₹500"
+            android:textColor="#38BDF8"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/widget_chip_bg" />
+    </LinearLayout>
+</LinearLayout>

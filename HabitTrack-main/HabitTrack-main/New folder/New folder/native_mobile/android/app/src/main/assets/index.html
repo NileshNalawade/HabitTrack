@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#07090F">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HabitTrack">
+  <meta name="description" content="Offline Habit and Expense Tracker with Local Excel Sync and Interactive Widgets">
+  <title>HabitTrack - Offline Habits &amp; Expenses</title>
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Top Application Header -->
+  <header class="app-topbar">
+    <div class="brand-section">
+      <div class="brand-icon-box">
+        <img src="icons/icon-192.png" alt="HabitTrack Logo" class="brand-logo-img">
+      </div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h1 class="brand-title">HabitTrack</h1>
+          <span class="brand-pill">100% Offline</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Streak & Spend Badges -->
+    <div class="topbar-stats">
+      <div class="topbar-stat-item streak-stat">
+        <span class="topbar-stat-label">🔥 Streak</span>
+        <span class="topbar-stat-val streak" id="header-streak-count">0d</span>
+      </div>
+      <div class="topbar-stat-item">
+        <span class="topbar-stat-label">🏆 Best</span>
+        <span class="topbar-stat-val" id="header-best-streak">0d</span>
+      </div>
+      <div class="topbar-stat-item spend-stat">
+        <span class="topbar-stat-label">💳 Today's Spend</span>
+        <span class="topbar-stat-val spend-val" id="header-today-spend">₹0.00</span>
+      </div>
+    </div>
+
+    <!-- Sandwich Menu Toggle Button -->
+    <div class="topbar-actions">
+      <button class="btn-topbar sandwich-btn" id="btn-menu-toggle" aria-label="Open Navigation Menu" title="Menu">
+        <span class="sandwich-line"></span>
+        <span class="sandwich-line"></span>
+        <span class="sandwich-line"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Collapsible Sandwich Drawer Overlay & Menu -->
+  <div class="sandwich-backdrop" id="sandwich-backdrop"></div>
+  <aside class="sandwich-drawer" id="sandwich-drawer">
+    <div class="drawer-header">
+      <div class="drawer-brand">
+        <span class="drawer-brand-icon">⚡</span>
+        <span class="drawer-brand-title">Menu &amp; Tools</span>
+      </div>
+      <button class="drawer-close-btn" id="btn-menu-close" aria-label="Close Menu">✕</button>
+    </div>
+
+    <!-- Sync status pill inside drawer -->
+    <div class="drawer-sync-box">
+      <div class="sync-pill synced" id="sync-status-pill">
+        <span class="sync-dot active"></span> Excel Synced
+      </div>
+      <span class="sync-time" id="sync-time-label">Auto-saved to Habit_Expense_Tracker.xlsx</span>
+    </div>
+
+    <div class="drawer-divider"></div>
+
+    <nav class="drawer-menu-list">
+      <button class="drawer-item" id="btn-theme-toggle">
+        <span class="drawer-item-icon">🌙</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Toggle Theme</span>
+          <span class="drawer-item-sub">Switch between Light &amp; Dark</span>
+        </div>
+      </button>
+
+      <button class="drawer-item" id="btn-manage-master">
+        <span class="drawer-item-icon">⚙️</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Master Habits</span>
+          <span class="drawer-item-sub">Manage recurring habit list</span>
+        </div>
+      </button>
+
+      <button class="drawer-item" id="btn-download-xlsx">
+        <span class="drawer-item-icon">📥</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Export .xlsx</span>
+          <span class="drawer-item-sub">Download master 4-sheet Excel workbook</span>
+        </div>
+      </button>
+
+      <button class="drawer-item" id="btn-bind-file">
+        <span class="drawer-item-icon">💾</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Bind Disk</span>
+          <span class="drawer-item-sub">Direct file write via File System API</span>
+        </div>
+      </button>
+
+      <button class="drawer-item" id="btn-import-modal">
+        <span class="drawer-item-icon">📤</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Import Data</span>
+          <span class="drawer-item-sub">Import from Excel or CSV backup</span>
+        </div>
+      </button>
+
+      <div class="drawer-divider"></div>
+
+      <button class="drawer-item text-danger" id="btn-reset-data">
+        <span class="drawer-item-icon">🗑️</span>
+        <div class="drawer-item-text">
+          <span class="drawer-item-label">Reset All Data</span>
+          <span class="drawer-item-sub">Clear all records and start streaks from Day 0</span>
+        </div>
+      </button>
+    </nav>
+
+    <div class="drawer-footer">
+      <span>HabitTrack v2.1 • 100% Offline</span>
+    </div>
+  </aside>
+
+  <!-- Main View Container -->
+  <main class="app-main">
+    <!-- View 1: Today -->
+    <section class="view-container active" id="view-today"></section>
+
+    <!-- View 2: Calendar & History -->
+    <section class="view-container" id="view-calendar"></section>
+
+    <!-- View 3: Expenses Ledger -->
+    <section class="view-container" id="view-expenses"></section>
+
+    <!-- View 4: Analytics & Visual Charts -->
+    <section class="view-container" id="view-analytics"></section>
+
+    <!-- View 5: Interactive Widgets Simulator & Native Code -->
+    <section class="view-container" id="view-widgets"></section>
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav-bar">
+    <div class="nav-container">
+      <button class="bottom-nav-item active" data-tab="today">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Today</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="calendar">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">Calendar</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="expenses">
+        <span class="nav-icon">💳</span>
+        <span class="nav-label">Expenses</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="analytics">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Analytics</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="widgets">
+        <span class="nav-icon">📱</span>
+        <span class="nav-label">Widgets</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==========================================
+       MODALS
+       ========================================== -->
+
+  <!-- Modal 1: Ad-Hoc Task ("+ Today Only") -->
+  <div class="modal-overlay" id="modal-adhoc">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Single-Day Ad-Hoc Task</h3>
+        <button class="btn-modal-close">&times;</button>
+      </div>
+      <form id="form-adhoc-task">
+        <div class="modal-body">
+          <p class="form-label" style="margin-bottom: 12px; color: var(--blue-l);">
+            ⚡ Single-day tasks are unique to this date and do not pollute your recurring master schedule.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-input" id="adhoc-date-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Task Name</label>
+            <input type="text" class="form-input" id="adhoc-name-input" placeholder="e.g. Schedule Doctor Appointment" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes / Details (Optional)</label>
+            <textarea class="form-textarea" id="adhoc-notes-input" rows="2" placeholder="Specific notes for today only..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-action btn-modal-close">Cancel</button>
+          <button type="submit" class="btn-primary-action">+ Add to Today</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Log Expense (Standalone, Auto-today date, Item & Amount only) -->
+  <div class="modal-overlay" id="modal-expense">
+    <div class="modal-dialog glow-red-modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="expense-modal-title">💳 Quick Log Expense</h3>
+        <button class="btn-modal-close">&times;</button>
+      </div>
+      <form id="form-add-expense">
+        <div class="modal-body">
+          <div class="auto-date-badge">
+            <span class="auto-date-dot"></span>
+            <span>Date automatically set to <strong>Today</strong> (<span id="modal-today-date-text"></span>)</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Item / Expense Name</label>
+            <input type="text" class="form-input" id="exp-item-input" placeholder="e.g. Coffee, Groceries, Fuel, Gym fee" required autofocus>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <input type="number" step="0.01" min="0.01" class="form-input" id="exp-amount-input" placeholder="₹ 0.00" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-action btn-modal-close">Cancel</button>
+          <button type="submit" class="btn-primary-action btn-red-glow">
+            + Save Expense
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Manage Recurring Master Habits -->
+  <div class="modal-overlay" id="modal-master-tasks">
+    <div class="modal-dialog" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Master Recurring Habits</h3>
+        <button class="btn-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="form-label" style="margin-bottom: 12px; text-transform: none; color: var(--text-s);">
+          These daily habits auto-populate into your checklist every day at 00:00.
+        </p>
+
+        <div class="master-tasks-list" id="master-tasks-list"></div>
+
+        <hr style="border: 0; border-top: 1px solid var(--b2); margin: 16px 0;">
+
+        <h4 style="font-size: 13px; font-weight: 500; margin-bottom: 10px; color: var(--blue-l);">+ Add New Recurring Habit</h4>
+        <form id="form-add-master-task">
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Habit Name</label>
+              <input type="text" class="form-input" id="master-name-input" placeholder="e.g. Meditation 15m" required>
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Icon</label>
+              <input type="text" class="form-input" id="master-icon-input" placeholder="🧘" value="⭐">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label">Frequency</label>
+            <select class="form-select" id="master-freq-input">
+              <option value="Daily" selected>Daily (Every Day)</option>
+              <option value="Weekdays">Weekdays (Mon-Fri)</option>
+              <option value="Weekends">Weekends Only</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center;">
+            Save Recurring Habit
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Import Excel / CSV / JSON -->
+  <div class="modal-overlay" id="modal-import">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">📤 Import & Sync Data</h3>
+        <button class="btn-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="form-label" style="margin-bottom: 14px; text-transform: none; color: var(--text-s);">
+          Upload your JSON backup or spreadsheet file to restore or synchronize your local database.
+        </p>
+
+        <div class="dropzone-box" id="excel-dropzone">
+          <div class="dropzone-icon">📊</div>
+          <div class="dropzone-text">Click or Drag & Drop File Here</div>
+          <div class="dropzone-sub">Supports .json, .xlsx, and .csv (100% offline parsing)</div>
+          <input type="file" id="excel-file-input" accept=".xlsx,.csv,.json" style="display: none;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary-action btn-modal-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Toast Notifications -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Main Application Script (Self-contained, offline-first bundle) -->
+  <script src="js/bundle.js?v=2.1.0"></script>
+  <script>
+    // Clean up any stale Service Worker caches from previous installations
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (var i = 0; i < registrations.length; i++) {
+          registrations[i].unregister();
+        }
+      }).catch(function() {});
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (var i = 0; i < names.length; i++) {
+          caches.delete(names[i]);
+        }
+      }).catch(function() {});
+    }
+  </script>
+</body>
+</html>

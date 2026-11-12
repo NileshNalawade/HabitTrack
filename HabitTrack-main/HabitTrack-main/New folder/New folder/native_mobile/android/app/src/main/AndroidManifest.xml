@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="HabitTrack"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AppCompat.NoActionBar">
+
+        <!-- Main App Activity (Loads full-screen offline app) -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Deep link for quick expense entry -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="habittrack" android:host="quick-add-expense" />
+            </intent-filter>
+        </activity>
+
+        <!-- Home Screen Widget 1: Habit Tracker Widget -->
+        <receiver
+            android:name=".widget.HabitWidgetProvider"
+            android:exported="true"
+            android:label="HabitTrack: Daily Habits">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/habit_widget_info" />
+        </receiver>
+
+        <!-- Home Screen Widget 2: Standalone Expense Widget -->
+        <receiver
+            android:name=".widget.ExpenseWidgetProvider"
+            android:exported="true"
+            android:label="HabitTrack: Today's Spend">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/expense_widget_info" />
+        </receiver>
+
+        <!-- Background Action Receiver for 1-Tap Widget Completion & Quick Logging -->
+        <receiver
+            android:name=".widget.WidgetActionReceiver"
+            android:exported="false" />
+
+        <!-- Floating Quick Expense Dialog Activity (Direct floating modal from widget without launching main app) -->
+        <activity
+            android:name=".widget.QuickExpenseActivity"
+            android:theme="@style/Theme.QuickExpenseDialog"
+            android:exported="false"
+            android:windowSoftInputMode="stateVisible|adjustResize"
+            android:excludeFromRecents="true" />
+
+    </application>
+
+</manifest>
+
