@@ -85,15 +85,21 @@ jobs:
           grep -q "android.enableJetifier" "$PROJECT_DIR/gradle.properties" || echo "android.enableJetifier=true" >> "$PROJECT_DIR/gradle.properties"
           grep -q "org.gradle.jvmargs" "$PROJECT_DIR/gradle.properties" || echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> "$PROJECT_DIR/gradle.properties"
 
-          # 6. Ensure gradlew is executable
-          chmod +x "$PROJECT_DIR/gradlew" 2>/dev/null || true
-
       - name: Build Android APK with Gradle
         run: |
           cd "$PROJECT_DIR"
-          if [ -f "./gradlew" ]; then
+
+          # If gradle-wrapper.jar is missing from repo, generate it or fall back to gradle CLI directly
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "gradle-wrapper.jar is missing from repo. Regenerating wrapper with Gradle 8.5..."
+            gradle wrapper --gradle-version 8.5 2>/dev/null || true
+          fi
+
+          if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            chmod +x gradlew 2>/dev/null || true
             ./gradlew assembleDebug --stacktrace --no-daemon --console=plain
           else
+            echo "Running assembleDebug directly with system Gradle 8.5..."
             gradle assembleDebug --stacktrace --no-daemon --console=plain
           fi
 
