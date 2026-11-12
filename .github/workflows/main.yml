@@ -1,4 +1,4 @@
-name: Build Android APK with Home Screen Widgets
+name: Build Android APK
 
 on:
   push:
@@ -10,190 +10,115 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
-      - name: Setup Gradle
+      - name: Set up Gradle 8.5
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: 8.5
+          gradle-version: '8.5'
           cache-disabled: true
 
-      - name: Prepare Clean Android Build Environment
+      - name: Locate Android project and copy to a space-free build folder
         run: |
-          # 1. Locate settings.gradle anywhere in repository
-          SETTINGS_FILE=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
+          set -e
+          find_settings() {
+            find . -name settings.gradle -not -path "*/build/*" -not -path "./.git/*" | head -n 1
+          }
 
+          SETTINGS_FILE=$(find_settings)
+
+          # Fallback: a .zip was uploaded to the repo instead of the extracted folder.
+          # Python is used because Windows-made zips use "\" separators that plain `unzip` mangles.
           if [ -z "$SETTINGS_FILE" ]; then
-            echo "Unpacking zip archives if present..."
-            find . -name "*.zip" | while read -r zipfile; do
-              unzip -o "$zipfile" || true
+            echo "settings.gradle not found - trying to extract zip archives..."
+            find . -name "*.zip" -not -path "./.git/*" | while read -r z; do
+              python3 - "$z" <<'PY'
+          import sys, zipfile, os
+          z = zipfile.ZipFile(sys.argv[1])
+          for i in z.infolist():
+              p = i.filename.replace("\\", "/")
+              if p.endswith("/"):
+                  continue
+              os.makedirs(os.path.dirname(p) or ".", exist_ok=True)
+              with open(p, "wb") as f:
+                  f.write(z.read(i))
+          PY
             done
-            SETTINGS_FILE=$(find . -name "settings.gradle" -not -path "*/build/*" | head -n 1)
+            SETTINGS_FILE=$(find_settings)
           fi
 
           if [ -z "$SETTINGS_FILE" ]; then
-            echo "ERROR: settings.gradle could not be found!"
+            echo "::error::settings.gradle not found. Upload the project folder contents (not only a .zip)."
             exit 1
           fi
 
           SRC_DIR=$(dirname "$SETTINGS_FILE")
-          echo "Found Android source at: $SRC_DIR"
+          echo "Android project found at: $SRC_DIR"
 
-          # 2. Copy project to a clean build directory without spaces (fixes AAPT2 space path bug)
+          # Copy to a path without spaces (avoids AAPT2 path bugs); "/." also copies hidden files
           BUILD_DIR="$RUNNER_TEMP/android_build"
           rm -rf "$BUILD_DIR"
           mkdir -p "$BUILD_DIR"
-          cp -rf "$SRC_DIR"/* "$BUILD_DIR/"
-          echo "BUILD_DIR=$BUILD_DIR" >> $GITHUB_ENV
+          cp -a "$SRC_DIR"/. "$BUILD_DIR"/
+          echo "BUILD_DIR=$BUILD_DIR" >> "$GITHUB_ENV"
 
-          # 3. Clean up loose .kt files or ghost res folders at root
-          rm -f "$BUILD_DIR"/*.kt 2>/dev/null || true
-          rm -rf "$BUILD_DIR"/res 2>/dev/null || true
-
-          # 4. Strip invalid windowSoftInputMode from all styles.xml
-          find "$BUILD_DIR" -name "styles.xml" -exec sed -i '/windowSoftInputMode/d' {} +
-
-          # 5. Ensure valid button drawable exists
-          cat << 'EOF' > "$BUILD_DIR/app/src/main/res/drawable/btn_primary_bg.xml"
-          <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-              <solid android:color="#06B6D4" />
-              <corners android:radius="8dp" />
-          </shape>
-          EOF
-
-          # 6. Sanitize app/build.gradle: remove undefined signingConfigs.debug and add lint options
-          BG_FILE="$BUILD_DIR/app/build.gradle"
-          if [ -f "$BG_FILE" ]; then
-            sed -i '/signingConfigs\.debug/d' "$BG_FILE"
-            if ! grep -q "abortOnError false" "$BG_FILE"; then
-              sed -i '/android {/a \    lint { abortOnError false; checkReleaseBuilds false }' "$BG_FILE"
-            fi
-          fi
-
-          # 7. Inject clean WidgetActionReceiver.kt (purges any lingering AppDatabase references)
-          REC_DIR="$BUILD_DIR/app/src/main/java/com/habittracker/widget"
-          mkdir -p "$REC_DIR"
-          cat << 'EOF' > "$REC_DIR/WidgetActionReceiver.kt"
-          package com.habittracker.widget
-
-          import android.content.BroadcastReceiver
-          import android.content.Context
-          import android.content.Intent
-          import android.widget.Toast
-          import com.habittracker.data.WidgetDataHelper
-
-          class WidgetActionReceiver : BroadcastReceiver() {
-              override fun onReceive(context: Context, intent: Intent) {
-                  when (intent.action) {
-                      ACTION_TOGGLE_HABIT -> {
-                          val logId = intent.getStringExtra(EXTRA_LOG_ID) ?: return
-                          WidgetDataHelper.toggleHabit(context, logId)
-                          WidgetDataHelper.refreshHabitWidget(context)
-                      }
-                      ACTION_CYCLE_DAY_TYPE -> {
-                          val nextType = WidgetDataHelper.cycleDayType(context)
-                          WidgetDataHelper.refreshHabitWidget(context)
-                          Toast.makeText(context, "Day set to: $nextType", Toast.LENGTH_SHORT).show()
-                      }
-                      ACTION_QUICK_ADD_20 -> {
-                          WidgetDataHelper.addExpense(context, "Quick Spend", 20.0)
-                          val total = WidgetDataHelper.getTodayExpenseTotal(context)
-                          Toast.makeText(context, "Added +₹20.00! Today: ₹${String.format("%.2f", total)}", Toast.LENGTH_SHORT).show()
-                      }
-                      ACTION_QUICK_ADD_50 -> {
-                          WidgetDataHelper.addExpense(context, "Quick Spend", 50.0)
-                          val total = WidgetDataHelper.getTodayExpenseTotal(context)
-                          Toast.makeText(context, "Added +₹50.00! Today: ₹${String.format("%.2f", total)}", Toast.LENGTH_SHORT).show()
-                      }
-                      ACTION_QUICK_ADD_100 -> {
-                          WidgetDataHelper.addExpense(context, "Quick Spend", 100.0)
-                          val total = WidgetDataHelper.getTodayExpenseTotal(context)
-                          Toast.makeText(context, "Added +₹100.00! Today: ₹${String.format("%.2f", total)}", Toast.LENGTH_SHORT).show()
-                      }
-                      ACTION_QUICK_ADD_200 -> {
-                          WidgetDataHelper.addExpense(context, "Quick Spend", 200.0)
-                          val total = WidgetDataHelper.getTodayExpenseTotal(context)
-                          Toast.makeText(context, "Added +₹200.00! Today: ₹${String.format("%.2f", total)}", Toast.LENGTH_SHORT).show()
-                      }
-                      ACTION_QUICK_ADD_500 -> {
-                          WidgetDataHelper.addExpense(context, "Quick Spend", 500.0)
-                          val total = WidgetDataHelper.getTodayExpenseTotal(context)
-                          Toast.makeText(context, "Added +₹500.00! Today: ₹${String.format("%.2f", total)}", Toast.LENGTH_SHORT).show()
-                      }
-                  }
-              }
-
-              companion object {
-                  const val ACTION_TOGGLE_HABIT = "com.habittracker.ACTION_TOGGLE_HABIT"
-                  const val ACTION_CYCLE_DAY_TYPE = "com.habittracker.ACTION_CYCLE_DAY_TYPE"
-                  const val ACTION_QUICK_ADD_20 = "com.habittracker.ACTION_QUICK_ADD_20"
-                  const val ACTION_QUICK_ADD_50 = "com.habittracker.ACTION_QUICK_ADD_50"
-                  const val ACTION_QUICK_ADD_100 = "com.habittracker.ACTION_QUICK_ADD_100"
-                  const val ACTION_QUICK_ADD_200 = "com.habittracker.ACTION_QUICK_ADD_200"
-                  const val ACTION_QUICK_ADD_500 = "com.habittracker.ACTION_QUICK_ADD_500"
-                  const val EXTRA_LOG_ID = "com.habittracker.EXTRA_LOG_ID"
-              }
-          }
-          EOF
-
-          # 8. Sync latest web assets into app assets
-          WEB_INDEX=$(find . -name "index.html" -not -path "*/assets/*" -not -path "*/build/*" | head -n 1)
+          # Sync latest web app (repo root) into the Android assets, if present
+          WEB_INDEX=$(find . -name index.html -not -path "*/assets/*" -not -path "*/build/*" -not -path "./.git/*" | head -n 1)
           if [ -n "$WEB_INDEX" ]; then
             WEB_ROOT=$(dirname "$WEB_INDEX")
             ASSET_DIR="$BUILD_DIR/app/src/main/assets"
-            mkdir -p "$ASSET_DIR"
-            cp -f "$WEB_ROOT/index.html" "$ASSET_DIR/index.html" 2>/dev/null || true
-            [ -d "$WEB_ROOT/css" ] && cp -rf "$WEB_ROOT/css" "$ASSET_DIR/" 2>/dev/null || true
-            [ -d "$WEB_ROOT/js" ] && cp -rf "$WEB_ROOT/js" "$ASSET_DIR/" 2>/dev/null || true
-            [ -d "$WEB_ROOT/icons" ] && cp -rf "$WEB_ROOT/icons" "$ASSET_DIR/" 2>/dev/null || true
-            [ -f "$WEB_ROOT/manifest.json" ] && cp -f "$WEB_ROOT/manifest.json" "$ASSET_DIR/" 2>/dev/null || true
+            mkdir -p "$ASSET_DIR/js"
+            cp -f "$WEB_ROOT/index.html" "$ASSET_DIR/"
+            [ -f "$WEB_ROOT/manifest.json" ] && cp -f "$WEB_ROOT/manifest.json" "$ASSET_DIR/"
+            [ -f "$WEB_ROOT/sw.js" ] && cp -f "$WEB_ROOT/sw.js" "$ASSET_DIR/"
+            [ -d "$WEB_ROOT/css" ] && cp -rf "$WEB_ROOT/css" "$ASSET_DIR/"
+            [ -d "$WEB_ROOT/icons" ] && cp -rf "$WEB_ROOT/icons" "$ASSET_DIR/"
+            [ -f "$WEB_ROOT/js/bundle.js" ] && cp -f "$WEB_ROOT/js/bundle.js" "$ASSET_DIR/js/"
           fi
 
-          # 9. Configure local.properties and gradle.properties
+          # Build configuration
           echo "sdk.dir=$ANDROID_HOME" > "$BUILD_DIR/local.properties"
           touch "$BUILD_DIR/gradle.properties"
           grep -q "android.useAndroidX" "$BUILD_DIR/gradle.properties" || echo "android.useAndroidX=true" >> "$BUILD_DIR/gradle.properties"
           grep -q "org.gradle.jvmargs" "$BUILD_DIR/gradle.properties" || echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> "$BUILD_DIR/gradle.properties"
 
-      - name: Build Android APK with Gradle
+      - name: Build debug APK
         run: |
           cd "$BUILD_DIR"
 
-          # Regenerate wrapper jar if not present
-          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Regenerating wrapper jar..."
-            gradle wrapper --gradle-version 8.5 2>/dev/null || true
-          fi
-
-          chmod +x gradlew 2>/dev/null || true
-
-          # Execute build and capture full log for direct summary reporting
-          if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            ./gradlew assembleDebug --stacktrace --no-daemon --console=plain 2>&1 | tee "$RUNNER_TEMP/build.log"
+          # The wrapper jar is not committed - use the installed Gradle 8.5 directly
+          if [ -f gradle/wrapper/gradle-wrapper.jar ]; then
+            chmod +x gradlew
+            GRADLE_CMD="./gradlew"
           else
-            gradle assembleDebug --stacktrace --no-daemon --console=plain 2>&1 | tee "$RUNNER_TEMP/build.log"
+            GRADLE_CMD="gradle"
           fi
-          BUILD_STATUS=${PIPESTATUS[0]}
 
-          if [ $BUILD_STATUS -ne 0 ]; then
-            echo "## ❌ Gradle Build Failed" >> $GITHUB_STEP_SUMMARY
-            echo '```text' >> $GITHUB_STEP_SUMMARY
-            grep -E "(^e: |^w: |FAILURE:|Exception|error:)" "$RUNNER_TEMP/build.log" | head -n 40 >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            exit $BUILD_STATUS
+          set +e
+          $GRADLE_CMD assembleDebug --stacktrace --no-daemon --console=plain 2>&1 | tee "$RUNNER_TEMP/build.log"
+          STATUS=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$STATUS" -ne 0 ]; then
+            {
+              echo "## Gradle build failed"
+              echo '```text'
+              grep -E "(^e: |FAILURE:|What went wrong|error:|Exception)" "$RUNNER_TEMP/build.log" | head -n 40
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit "$STATUS"
           fi
 
       - name: Upload HabitTrack APK
         uses: actions/upload-artifact@v4
         with:
           name: HabitTrack-APK
-          path: "${{ runner.temp }}/android_build/app/build/outputs/apk/**/*.apk"
+          path: ${{ runner.temp }}/android_build/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
