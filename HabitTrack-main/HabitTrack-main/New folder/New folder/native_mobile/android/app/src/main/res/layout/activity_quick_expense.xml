@@ -248,10 +248,9 @@
             android:layout_weight="1.6"
             android:text="Save Expense"
             android:textColor="#0B0F17"
-            android:background="#06B6D4"
+            android:background="@drawable/btn_primary_bg"
             android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 
 </LinearLayout>
-

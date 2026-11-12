@@ -15,7 +15,5 @@
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:backgroundDimEnabled">true</item>
         <item name="android:backgroundDimAmount">0.65</item>
-        <item name="android:windowSoftInputMode">stateVisible|adjustResize</item>
     </style>
 </resources>
-
