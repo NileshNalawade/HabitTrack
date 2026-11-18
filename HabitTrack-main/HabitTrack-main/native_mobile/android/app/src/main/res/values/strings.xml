@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">HabitTrack</string>
+    <string name="widget_habit_desc">Interactive 1-tap Habit Tracker Checklist</string>
+    <string name="widget_expense_desc">Today Running Total Expenditure &amp; Quick Add</string>
+</resources>
+

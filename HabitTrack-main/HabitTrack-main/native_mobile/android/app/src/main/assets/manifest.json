@@ -1,0 +1,141 @@
+{
+  "name": "HabitTrack",
+  "short_name": "HabitTrack",
+  "description": "Offline Habit and Expense Tracker with Local Excel Sync and Interactive Widgets",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen"
+  ],
+  "background_color": "#06080E",
+  "theme_color": "#06080E",
+  "orientation": "portrait-primary",
+  "id": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "finance",
+    "lifestyle"
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Today Habits",
+      "short_name": "Habits",
+      "description": "View today's habit checklist",
+      "url": "/#today",
+      "icons": [
+        {
+          "src": "/icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Quick Log Expense",
+      "short_name": "Expense",
+      "description": "Quickly add an expense",
+      "url": "/#expenses",
+      "icons": [
+        {
+          "src": "/icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/screenshot-mobile.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Habit and Expense Tracker Mobile Screen"
+    },
+    {
+      "src": "/icons/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Habit and Expense Tracker Desktop Screen"
+    }
+  ],
+  "widgets": [
+    {
+      "name": "HabitTrack: Daily Habits",
+      "short_name": "Daily Habits",
+      "description": "Interactive checklist of today's habits",
+      "tag": "habittrack-habits-widget",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/icons/screenshot-mobile.png",
+          "sizes": "720x1280",
+          "type": "image/png",
+          "label": "Habit Tracker Home Screen Widget"
+        }
+      ],
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "HabitTrack: Today's Spend",
+      "short_name": "Today Spend",
+      "description": "Live expenditure tracker",
+      "tag": "habittrack-spend-widget",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/icons/screenshot-mobile.png",
+          "sizes": "720x1280",
+          "type": "image/png",
+          "label": "Expense Tracker Home Screen Widget"
+        }
+      ],
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}
